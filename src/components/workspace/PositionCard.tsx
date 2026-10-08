@@ -1,3 +1,4 @@
+import TradeReceipt from "./TradeReceipt";
 import ExecutionBreakdown from "./ExecutionBreakdown";
 import { useState, type Dispatch, type FormEvent } from "react";
 import {
@@ -87,7 +88,7 @@ export function ActivePosition({
           : p.profit < 0
             ? "Your position is below its starting value."
             : p.autoExit
-              ? "When you reach your target, your position closes automatically."
+              ? "When estimated net profit reaches your target, the paper position closes automatically."
               : "Auto-exit is off. You choose when to close this position."}
       </p>
       <div className={`qw-mobile-exit-status ${p.autoExit ? "" : "is-off"}`}>
@@ -106,6 +107,12 @@ export function ActivePosition({
           <dd>{euro(p.amount + p.profit)}</dd>
         </div>
       </dl>
+      <p className="qw-protection-status">
+        <ShieldCheck size={14} />
+        {p.protection === null
+          ? "Protection off"
+          : `Protection at −${euro(p.protection)} net loss`}
+      </p>
       <MobileDisclosure
         label="Position details"
         hint={
@@ -314,7 +321,10 @@ export function ClosedPosition({
           <dd>{euro(cash)}</dd>
         </div>
       </dl>
-      <ExecutionBreakdown position={p} />
+      <details className="qw-cost-breakdown qw-receipt-disclosure">
+        <summary>View paper trade receipt</summary>
+        <TradeReceipt position={p} />
+      </details>
       <ActionButton onClick={onCashOut} disabled={cash === 0}>
         Send to Bank
       </ActionButton>

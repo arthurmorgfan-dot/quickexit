@@ -190,8 +190,74 @@ export function restoreExecution(
         if (x.exit[key] !== estimate[key]) return null;
       clean.exit = { ...estimate, closedAt: x.exit.closedAt };
     } else if (x.exit !== undefined) return null;
-    return clean;
+    return closed ? sealPaperExecution(clean) : clean;
   } catch {
     return null;
   }
+}
+
+/** Estimates share the exact fill, rounding and target inversion used at execution. */
+export function estimatePaperTrade(
+  amount: number,
+  quotedPrice: number,
+  target: number,
+  costs: ExecutionCosts = PAPER_COSTS,
+) {
+  if (!Number.isSafeInteger(target) || target < 1)
+    throw new Error("Invalid paper target");
+  const execution = openPaper(amount, quotedPrice, 1, "estimate", costs);
+  const opening = valuePaper(amount, execution);
+  const breakEvenPrice = priceForNetProfit(amount, execution, 0);
+  const targetPrice = priceForNetProfit(amount, execution, target);
+  const atTarget = valuePaper(amount, execution, targetPrice);
+  return {
+    execution,
+    opening,
+    breakEvenPrice,
+    targetPrice,
+    atTarget,
+    entryPriceImpact: opening.entryCost - execution.entry.fee,
+    targetExitPriceImpact: atTarget.exitCost - atTarget.exitFee,
+    targetNetReturn: netReturn(amount, atTarget.netProfit),
+  };
+}
+
+export const netReturn = (amount: number, netProfit: number) =>
+  (netProfit / amount) * 100;
+
+/** Freeze recorded fills at closure/restoration, including all nested financial inputs. */
+export function sealPaperExecution(execution: PaperExecution): PaperExecution {
+  Object.freeze(execution.costs);
+  Object.freeze(execution.entry);
+  if (execution.exit) Object.freeze(execution.exit);
+  return Object.freeze(execution);
+}
+
+/** A receipt is a projection of the saved fill, never a valuation at a later quote. */
+export function paperReceipt(amount: number, execution: PaperExecution) {
+  const exit = execution.exit;
+  if (!exit) return null;
+  return Object.freeze({
+    id: `QE-${execution.entry.requestId}`,
+    openedAt: execution.entry.openedAt,
+    closedAt: exit.closedAt,
+    investment: amount,
+    quantity: execution.entry.quantity,
+    entryMarketPrice: execution.entry.quotedPrice,
+    entryExecutionPrice: execution.entry.executionPrice,
+    entryFee: execution.entry.fee,
+    exitMarketPrice: exit.marketPrice,
+    exitExecutionPrice: exit.exitExecutionPrice,
+    exitFee: exit.exitFee,
+    spreadBps: execution.costs.spreadBps,
+    slippageBps: execution.costs.slippageBps,
+    entryPriceImpact: exit.entryCost - execution.entry.fee,
+    exitPriceImpact: exit.exitCost - exit.exitFee,
+    grossProceeds: exit.exitNotional,
+    totalCosts: exit.entryCost + exit.exitCost,
+    grossProfit: exit.grossProfit,
+    netProfit: exit.netProfit,
+    netReturn: netReturn(amount, exit.netProfit),
+    proceeds: exit.proceeds,
+  });
 }

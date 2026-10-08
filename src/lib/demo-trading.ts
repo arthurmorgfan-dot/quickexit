@@ -1,5 +1,6 @@
 import {
   openPaper,
+  sealPaperExecution,
   valuePaper,
   priceForNetProfit,
   validCosts,
@@ -59,6 +60,12 @@ export const euro = (cents: number) =>
 export const signedEuro = (cents: number) =>
   `${cents >= 0 ? "+" : "−"}${euro(Math.abs(cents))}`;
 export const priceEuro = (price: number) => euro(Math.round(price * 100));
+/** Format small quantities without rounding a non-zero fill to zero. */
+export const cryptoQuantity = (quantity: number) =>
+  new Intl.NumberFormat("en-GB", {
+    maximumSignificantDigits: 12,
+    useGrouping: false,
+  }).format(quantity);
 export const currentPrice = (p: Position) =>
   p.execution?.marketPrice ?? p.entryPrice * (1 + p.profit / p.amount);
 export const profitPercent = (p: Position) =>
@@ -142,6 +149,9 @@ export type DemoAction = (
       protection: number | null;
       autoExit: boolean;
       entryPrice?: number;
+      /** Quote reviewed by the user; never used to override a Live provider quote. */
+      expectedQuote?: number;
+      expectedMarketMode?: "live" | "demo";
       costs?: ExecutionCosts;
       requestId?: string;
       now?: number;
@@ -185,6 +195,7 @@ function close(
         },
       }
     : undefined;
+  if (execution) sealPaperExecution(execution);
   const closed: Position = {
     ...position,
     status: "closed",
@@ -197,6 +208,7 @@ function close(
         }
       : {}),
   };
+  Object.freeze(closed);
   let next: DemoState = {
     ...state,
     active: null,

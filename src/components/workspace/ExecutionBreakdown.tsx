@@ -1,4 +1,10 @@
-import { euro, signedEuro, priceEuro, type Position } from "@/lib/demo-trading";
+import {
+  cryptoQuantity,
+  euro,
+  signedEuro,
+  priceEuro,
+  type Position,
+} from "@/lib/demo-trading";
 import { valuePaper, priceForNetProfit } from "@/lib/paper-execution";
 export default function ExecutionBreakdown({
   position: p,
@@ -28,7 +34,7 @@ export default function ExecutionBreakdown({
           ["Quoted entry price", priceEuro(x.entry.quotedPrice)],
           ["Paper entry execution", priceEuro(x.entry.executionPrice)],
           ["Entry fee", euro(x.entry.fee)],
-          ["Crypto acquired", `${x.entry.quantity.toFixed(8)} ${p.asset}`],
+          ["Crypto acquired", `${cryptoQuantity(x.entry.quantity)} ${p.asset}`],
           ["Gross market value", euro(v.grossMarketValue)],
           [
             x.exit ? "Paper exit execution" : "Estimated exit execution",

@@ -33,6 +33,7 @@ import CashOut from "./CashOut";
 import Positions from "./Positions";
 import MobileDisclosure from "./MobileDisclosure";
 import usePersistentDemo from "./usePersistentDemo";
+import AccountPanel from "./AccountPanel";
 const navigation = [
   { name: "Home", icon: House },
   { name: "Trade", icon: ChartNoAxesCombined },
@@ -50,6 +51,7 @@ const descriptions: Record<View, string> = {
   Settings: "A demo that moves at your pace.",
 };
 export default function Workspace() {
+  const workspace = usePersistentDemo();
   const {
     state,
     asset,
@@ -62,15 +64,34 @@ export default function Workspace() {
     market,
     marketStatus,
     setMarketMode,
-  } = usePersistentDemo();
+    account,
+    syncStatus,
+    ready,
+    checkingAuth,
+  } = workspace;
   const [view, setView] = useState<View>("Trade"),
     [confirmReset, setConfirmReset] = useState(false);
-  const saveLabel =
-    storageStatus === "loading"
-      ? "Restoring demo…"
-      : storageStatus === "saved"
-        ? "Saved on this device"
-        : "Not saved on this device";
+  const saveLabel = checkingAuth
+    ? "Checking account…"
+    : account
+      ? syncStatus === "saved"
+        ? "Saved to your account"
+        : syncStatus === "syncing"
+          ? "Syncing…"
+          : syncStatus === "loading"
+            ? "Restoring account…"
+            : syncStatus === "conflict"
+              ? "Sync needs your choice"
+              : syncStatus === "import"
+                ? "Choose your starting state"
+                : storageStatus === "unavailable"
+                  ? "Not saved · cloud sync paused"
+                  : "Cloud sync paused · device copy kept"
+      : storageStatus === "loading"
+        ? "Restoring demo…"
+        : storageStatus === "saved"
+          ? "Saved on this device"
+          : "Not saved on this device";
   const titleRef = useRef<HTMLHeadingElement>(null);
   const navigate = (next: View) => {
     setView(next);
@@ -122,6 +143,7 @@ export default function Workspace() {
   useEffect(() => {
     if (
       !hydrated ||
+      !ready ||
       market.mode === "live" ||
       activeId === undefined ||
       !state.playing
@@ -132,7 +154,7 @@ export default function Workspace() {
       4000,
     );
     return () => window.clearInterval(interval);
-  }, [activeId, state.playing, hydrated, dispatch, market.mode]);
+  }, [activeId, state.playing, hydrated, dispatch, market.mode, ready]);
   const selectedAsset = state.active?.asset ?? asset;
   const live = market.mode === "live";
   const quote = market.quotes[selectedAsset];
@@ -188,7 +210,7 @@ export default function Workspace() {
           <div className="qw-demo-label">
             <FlaskConical size={16} />
             <div>
-              <strong>Demo workspace</strong>
+              <strong>{account ? "Paper workspace" : "Demo workspace"}</strong>
               <span>Real clarity. Simulated money.</span>
             </div>
           </div>
@@ -223,8 +245,26 @@ export default function Workspace() {
             >
               <House size={19} />
             </button>
-            <span className="qw-avatar" aria-label="Demo profile">
-              D
+            {account ? (
+              <button
+                type="button"
+                className="qw-account-link"
+                onClick={() => navigate("Settings")}
+                aria-label={`Account settings for ${account.email}`}
+              >
+                <span className="qw-account-desktop">{account.email}</span>
+                <span className="qw-account-mobile">Account</span>
+              </button>
+            ) : (
+              <Link href="/signin" className="qw-account-link">
+                Sign in
+              </Link>
+            )}
+            <span
+              className="qw-avatar"
+              aria-label={account ? "Paper account" : "Demo profile"}
+            >
+              {account ? account.email.slice(0, 1).toUpperCase() : "D"}
             </span>
           </div>
         </header>
@@ -271,85 +311,91 @@ export default function Workspace() {
           <p className="qw-market-status" role="status">
             <strong>{marketLabel}</strong> · {marketMessage}
           </p>
+          <AccountPanel workspace={workspace} compact />
           {view === "Trade" && (
             <>
-              <div className="qw-trade-layout">
-                <MobileDisclosure
-                  label="Market overview"
-                  hint={`${selectedAsset} · ${marketLabel}`}
-                  className="qw-market-disclosure"
-                  enabled={!!state.active || !!state.lastClosed}
-                >
-                  <div className="qw-market-column">
-                    <MarketCard
-                      asset={selectedAsset}
-                      setAsset={setAsset}
-                      locked={!!state.active}
-                      live={live}
-                      price={
-                        live && quote
-                          ? quote.price
-                          : state.active
-                            ? currentPrice(state.active)
-                            : ASSETS[selectedAsset].price
-                      }
-                    />
-                    <div className="qw-plan-card">
-                      <span className="qw-overline">
-                        THE WAY OUT IS THE POINT.
-                      </span>
-                      <h2>
-                        Trade it. Profit.
-                        <br />
-                        <span>Send it home.</span>
-                      </h2>
-                      <div className="qw-plan-steps">
-                        <span
-                          className={
-                            state.active || state.lastClosed ? "is-done" : ""
-                          }
-                        >
-                          01 <strong>Choose your trade</strong>
+              <div className="qw-paper-controls" inert={!ready}>
+                <div className="qw-trade-layout">
+                  <MobileDisclosure
+                    label="Market overview"
+                    hint={`${selectedAsset} · ${marketLabel}`}
+                    className="qw-market-disclosure"
+                    enabled={!!state.active || !!state.lastClosed}
+                  >
+                    <div className="qw-market-column">
+                      <MarketCard
+                        asset={selectedAsset}
+                        setAsset={setAsset}
+                        locked={!!state.active}
+                        live={live}
+                        price={
+                          live && quote
+                            ? quote.price
+                            : state.active
+                              ? currentPrice(state.active)
+                              : ASSETS[selectedAsset].price
+                        }
+                      />
+                      <div className="qw-plan-card">
+                        <span className="qw-overline">
+                          THE WAY OUT IS THE POINT.
                         </span>
-                        <ArrowRight size={13} />
-                        <span className={state.lastClosed ? "is-done" : ""}>
-                          02 <strong>Reach your exit</strong>
-                        </span>
-                        <ArrowRight size={13} />
-                        <span>
-                          03 <strong>Send it home</strong>
-                        </span>
+                        <h2>
+                          Trade it. Profit.
+                          <br />
+                          <span>Send it home.</span>
+                        </h2>
+                        <div className="qw-plan-steps">
+                          <span
+                            className={
+                              state.active || state.lastClosed ? "is-done" : ""
+                            }
+                          >
+                            01 <strong>Choose your trade</strong>
+                          </span>
+                          <ArrowRight size={13} />
+                          <span className={state.lastClosed ? "is-done" : ""}>
+                            02 <strong>Reach your exit</strong>
+                          </span>
+                          <ArrowRight size={13} />
+                          <span>
+                            03 <strong>Send it home</strong>
+                          </span>
+                        </div>
+                        <p>
+                          Money enters for a trade. When the trade ends, the
+                          money leaves.
+                        </p>
                       </div>
-                      <p>
-                        Money enters for a trade. When the trade ends, the money
-                        leaves.
-                      </p>
                     </div>
-                  </div>
-                </MobileDisclosure>
-                {state.active ? (
-                  <ActivePosition
-                    key={state.active.id}
-                    position={state.active}
-                    dispatch={dispatch}
-                    playing={state.playing}
-                    live={live}
-                  />
-                ) : state.lastClosed ? (
-                  <ClosedPosition
-                    position={state.lastClosed}
-                    cash={state.cash}
-                    onCashOut={() => navigate("Cash Out")}
-                    onNewTrade={newTrade}
-                  />
-                ) : (
-                  <TradeForm
-                    asset={asset}
-                    dispatch={dispatch}
-                    disabled={live && !usableQuote}
-                    price={live && quote ? quote.price : ASSETS[asset].price}
-                  />
-                )}
+                  </MobileDisclosure>
+                  {state.active ? (
+                    <ActivePosition
+                      key={state.active.id}
+                      position={state.active}
+                      dispatch={dispatch}
+                      playing={state.playing}
+                      live={live}
+                    />
+                  ) : state.lastClosed ? (
+                    <ClosedPosition
+                      position={state.lastClosed}
+                      cash={state.cash}
+                      onCashOut={() => navigate("Cash Out")}
+                      onNewTrade={newTrade}
+                    />
+                  ) : (
+                    <TradeForm
+                      key={`${account?.id ?? "guest"}-${asset}-${market.mode}`}
+                      live={live}
+                      notice={state.announcement}
+                      asset={asset}
+                      dispatch={dispatch}
+                      disabled={live && !usableQuote}
+                      price={live && quote ? quote.price : ASSETS[asset].price}
+                    />
+                  )}
+                </div>
               </div>
               <section className="qw-card qw-recent">
                 <div className="qw-card-heading">
@@ -457,159 +503,181 @@ export default function Workspace() {
             </section>
           )}
           {view === "Cash Out" && (
-            <CashOut
-              cash={state.cash}
-              lastTransfer={state.lastTransfer}
-              sent={state.sent}
-              onTransfer={() =>
-                dispatch({ type: "TRANSFER", expectedSequence: state.sequence })
-              }
-              onTrade={newTrade}
-            />
+            <div className="qw-paper-controls" inert={!ready}>
+              <CashOut
+                cash={state.cash}
+                lastTransfer={state.lastTransfer}
+                sent={state.sent}
+                onTransfer={() =>
+                  dispatch({
+                    type: "TRANSFER",
+                    expectedSequence: state.sequence,
+                  })
+                }
+                onTrade={newTrade}
+              />
+            </div>
           )}{" "}
           {view === "Settings" && (
             <div className="qw-settings-layout">
               <section className="qw-card qw-settings">
                 <div className="qw-card-heading">
-                  <h2>Demo preferences</h2>
-                  <span className="qw-badge">LOCAL ONLY</span>
+                  <h2>{account ? "Paper preferences" : "Demo preferences"}</h2>
+                  <span className="qw-badge">
+                    {account ? "CLOUD SYNC" : "LOCAL ONLY"}
+                  </span>
                 </div>
-                <div className="qw-setting-info">
-                  <span id="market-data-label">Market data</span>
-                  <div
-                    className="qw-options"
-                    role="group"
-                    aria-labelledby="market-data-label"
-                  >
-                    {(["live", "demo"] as const).map((mode) => (
+                <AccountPanel workspace={workspace} />
+                <div className="qw-paper-controls" inert={!ready}>
+                  <div className="qw-setting-info">
+                    <span id="market-data-label">Market data</span>
+                    <div
+                      className="qw-options"
+                      role="group"
+                      aria-labelledby="market-data-label"
+                    >
+                      {(["live", "demo"] as const).map((mode) => (
+                        <button
+                          type="button"
+                          key={mode}
+                          aria-pressed={market.mode === mode}
+                          className={market.mode === mode ? "is-selected" : ""}
+                          onClick={() => setMarketMode(mode)}
+                        >
+                          {mode === "live" ? "Live" : "Demo"}
+                        </button>
+                      ))}
+                    </div>
+                    <p>
+                      Live uses public EUR market quotes from Coinbase. Demo
+                      enables predictable outcomes. Switching keeps your entry
+                      price fixed; returning to Live may trigger a paper exit at
+                      the next market update. Charts remain illustrative. No
+                      real trades or funds.
+                    </p>
+                  </div>
+                  {!live && (
+                    <Switch
+                      label="Subtle price movement"
+                      description="Active positions move slightly every four seconds. Reduced-motion preferences pause this by default."
+                      checked={state.playing}
+                      onChange={(value) => dispatch({ type: "PLAY", value })}
+                    />
+                  )}
+                  <div className="qw-setting-info">
+                    <span>Device storage</span>
+                    <strong role="status">{saveLabel}</strong>
+                    <p>
+                      {storageStatus === "unavailable"
+                        ? "Device storage is unavailable. Changes and resets may not survive refresh; you can still use the temporary demo."
+                        : account
+                          ? "Paper state is cached on this device and synced to your account. No real funds or banking details."
+                          : "Demo paper state stays in this browser. Sign in to save across devices."}
+                    </p>
+                    {recovered && (
+                      <p role="status">
+                        The previous saved demo could not be restored. A clean
+                        paper-trading demo is ready.
+                      </p>
+                    )}
+                  </div>
+                  <div className="qw-setting-info">
+                    <span>Paper trading assumptions</span>
+                    <strong>
+                      Entry fee {basisPercent(PAPER_COSTS.entryFeeBps)} · Exit
+                      fee {basisPercent(PAPER_COSTS.exitFeeBps)}
+                    </strong>
+                    <p>
+                      Spread {basisPercent(PAPER_COSTS.spreadBps)} (half per
+                      side) · Slippage {basisPercent(PAPER_COSTS.slippageBps)}{" "}
+                      per side. Investment includes the entry fee. Targets and
+                      percentage returns are net of estimated costs. Each trade
+                      keeps its opening assumptions. Actual exchange execution
+                      can differ.
+                    </p>
+                  </div>
+                  <div className="qw-setting-info">
+                    <span>Currency</span>
+                    <strong>Euro · EUR</strong>
+                    <p>Clear outcomes, in money you understand.</p>
+                  </div>
+                  <div className="qw-setting-info">
+                    <span>Demo bank account</span>
+                    <strong>•••• 4821</strong>
+                    <p>A placeholder only. There is no bank connection.</p>
+                  </div>
+                  <div className="qw-setting-info">
+                    <span>Realised demo profit / loss</span>
+                    <strong
+                      className={realised >= 0 ? "qw-positive" : "qw-negative"}
+                    >
+                      {signedEuro(realised)}
+                    </strong>
+                    <p>Excludes the illustrative example history.</p>
+                  </div>
+                  <div className="qw-reset">
+                    <h3>Start with a clean slate</h3>
+                    <p>
+                      Clear saved positions, activity, preferences, and
+                      simulated balances{" "}
+                      {account
+                        ? "in this account, across synced devices"
+                        : "on this device"}
+                      .
+                    </p>
+                    {confirmReset ? (
+                      <div
+                        id="reset-demo-confirmation"
+                        className="qw-reset-confirmation"
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") cancelReset();
+                        }}
+                        role="group"
+                        aria-labelledby="reset-confirmation-label"
+                      >
+                        <p id="reset-confirmation-label">
+                          Reset{" "}
+                          {account
+                            ? "this account’s paper workspace"
+                            : "this device’s demo"}
+                          ? Your saved trades, activity, and simulated balances
+                          will be cleared. This cannot be undone.
+                        </p>
+                        <ActionButton
+                          onClick={() => {
+                            resetDemo();
+                            cancelReset();
+                          }}
+                        >
+                          Reset demo
+                        </ActionButton>
+                        <button
+                          type="button"
+                          id="keep-demo-button"
+                          className="qw-text-button"
+                          onClick={cancelReset}
+                        >
+                          Keep this demo
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        key={mode}
-                        aria-pressed={market.mode === mode}
-                        className={market.mode === mode ? "is-selected" : ""}
-                        onClick={() => setMarketMode(mode)}
-                      >
-                        {mode === "live" ? "Live" : "Demo"}
-                      </button>
-                    ))}
-                  </div>
-                  <p>
-                    Live uses public EUR market quotes from Coinbase. Demo
-                    enables predictable outcomes. Switching keeps your entry
-                    price fixed; returning to Live may trigger a paper exit at
-                    the next market update. Charts remain illustrative. No real
-                    trades or funds.
-                  </p>
-                </div>
-                {!live && (
-                  <Switch
-                    label="Subtle price movement"
-                    description="Active positions move slightly every four seconds. Reduced-motion preferences pause this by default."
-                    checked={state.playing}
-                    onChange={(value) => dispatch({ type: "PLAY", value })}
-                  />
-                )}
-                <div className="qw-setting-info">
-                  <span>Device storage</span>
-                  <strong role="status">{saveLabel}</strong>
-                  <p>
-                    {storageStatus === "unavailable"
-                      ? "Device storage is unavailable. Changes and resets may not survive refresh; you can still use the temporary demo."
-                      : "Paper-trading state stays in this browser on this device. No account or cloud storage."}
-                  </p>
-                  {recovered && (
-                    <p role="status">
-                      The previous saved demo could not be restored. A clean
-                      paper-trading demo is ready.
-                    </p>
-                  )}
-                </div>
-                <div className="qw-setting-info">
-                  <span>Paper trading assumptions</span>
-                  <strong>
-                    Entry fee {basisPercent(PAPER_COSTS.entryFeeBps)} · Exit fee{" "}
-                    {basisPercent(PAPER_COSTS.exitFeeBps)}
-                  </strong>
-                  <p>
-                    Spread {basisPercent(PAPER_COSTS.spreadBps)} (half per side)
-                    · Slippage {basisPercent(PAPER_COSTS.slippageBps)} per side.
-                    Investment includes the entry fee. Targets and percentage
-                    returns are net of estimated costs. Each trade keeps its
-                    opening assumptions. Actual exchange execution can differ.
-                  </p>
-                </div>
-                <div className="qw-setting-info">
-                  <span>Currency</span>
-                  <strong>Euro · EUR</strong>
-                  <p>Clear outcomes, in money you understand.</p>
-                </div>
-                <div className="qw-setting-info">
-                  <span>Demo bank account</span>
-                  <strong>•••• 4821</strong>
-                  <p>A placeholder only. There is no bank connection.</p>
-                </div>
-                <div className="qw-setting-info">
-                  <span>Realised demo profit / loss</span>
-                  <strong
-                    className={realised >= 0 ? "qw-positive" : "qw-negative"}
-                  >
-                    {signedEuro(realised)}
-                  </strong>
-                  <p>Excludes the illustrative example history.</p>
-                </div>
-                <div className="qw-reset">
-                  <h3>Start with a clean slate</h3>
-                  <p>
-                    Clear saved positions, activity, preferences, and simulated
-                    balances on this device.
-                  </p>
-                  {confirmReset ? (
-                    <div
-                      id="reset-demo-confirmation"
-                      className="qw-reset-confirmation"
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") cancelReset();
-                      }}
-                      role="group"
-                      aria-labelledby="reset-confirmation-label"
-                    >
-                      <p id="reset-confirmation-label">
-                        Reset this device’s demo? Your saved trades, activity,
-                        and simulated balances will be cleared. This cannot be
-                        undone.
-                      </p>
-                      <ActionButton
+                        id="reset-demo-button"
+                        className="qw-reset-button"
                         onClick={() => {
-                          resetDemo();
-                          cancelReset();
+                          setConfirmReset(true);
+                          window.requestAnimationFrame(() =>
+                            document
+                              .getElementById("keep-demo-button")
+                              ?.focus(),
+                          );
                         }}
                       >
-                        Reset demo
-                      </ActionButton>
-                      <button
-                        type="button"
-                        id="keep-demo-button"
-                        className="qw-text-button"
-                        onClick={cancelReset}
-                      >
-                        Keep this demo
+                        <RotateCcw size={14} /> Reset demo
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      id="reset-demo-button"
-                      className="qw-reset-button"
-                      onClick={() => {
-                        setConfirmReset(true);
-                        window.requestAnimationFrame(() =>
-                          document.getElementById("keep-demo-button")?.focus(),
-                        );
-                      }}
-                    >
-                      <RotateCcw size={14} /> Reset demo
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </section>
               <aside className="qw-settings-note">
@@ -620,10 +688,10 @@ export default function Workspace() {
                   With clear boundaries.
                 </h2>
                 <p>
-                  No accounts. No deposits. No bank details. Paper trading
-                  happens locally in this browser on this device. Live mode only
-                  reads public market prices. Refreshing keeps your
-                  paper-trading state; Reset demo clears it.
+                  No real deposits. No bank details. All trades and transfers
+                  are simulated. Accounts optionally sync paper state across
+                  devices; Try Demo stays local. Live mode only reads public
+                  market prices. Reset demo clears the current paper workspace.
                 </p>
                 <p>
                   Targets and downside protection in a future live product would

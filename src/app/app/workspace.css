@@ -1994,3 +1994,201 @@
   line-height: 1.7;
   text-align: left;
 }
+
+.qw-paper-controls {
+  display: contents;
+}
+.qw-account-link {
+  color: var(--qw-muted);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 12px 0;
+}
+.qw-account-panel {
+  padding: 18px 20px;
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.qw-account-panel strong {
+  color: var(--foreground);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.qw-account-panel p {
+  color: var(--qw-muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 6px 0 0;
+}
+.qw-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.qw-account-actions > p {
+  flex-basis: 100%;
+}
+.qw-account-actions button,
+.qw-account-actions a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .qw-account-link {
+    max-width: 100px;
+  }
+  .qw-account-panel {
+    padding: 16px;
+    gap: 12px;
+  }
+}
+.qw-account-mobile {
+  display: none;
+}
+@media (max-width: 700px) {
+  .qw-account-desktop {
+    display: none;
+  }
+  .qw-account-mobile {
+    display: inline;
+  }
+  .qe-workspace .qw-topbar > div:first-child {
+    min-width: 0;
+  }
+  .qe-workspace .qw-topbar > div:first-child > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .qe-workspace .qw-topbar-right {
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .qw-account-link {
+    min-height: 44px;
+  }
+}
+
+/* v0.4: compact reviews and fixed paper receipts reuse existing card tokens. */
+.qw-confirm-outcome,
+.qw-receipt-result {
+  padding: 20px 0;
+  display: grid;
+  gap: 8px;
+}
+.qw-confirm-outcome > span,
+.qw-receipt-result > span,
+.qw-receipt-result small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.qw-confirm-outcome > strong,
+.qw-receipt-result > strong {
+  font-size: 36px;
+  letter-spacing: -1.5px;
+  font-weight: 600;
+}
+.qw-confirm-outcome p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.qw-review-details {
+  margin: 8px 0 20px;
+}
+.qw-review-details > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.qw-review-details dt {
+  color: var(--muted);
+}
+.qw-review-details dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  max-width: 65%;
+}
+.qw-confirm-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+.qw-trade-receipt h3 {
+  font-size: 17px;
+  letter-spacing: -0.4px;
+}
+.qw-trade-receipt .qw-card-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.qw-trade-receipt {
+  padding-top: 18px;
+}
+.qw-receipt-id {
+  font-family: monospace;
+  font-size: 11px;
+}
+.qw-history-receipt {
+  max-width: 800px;
+}
+.qw-history-receipt > .qw-text-button {
+  margin-bottom: 8px;
+}
+.qw-receipt-disclosure > summary,
+.qw-trade-confirmation summary {
+  min-height: 44px;
+  display: list-item;
+  align-content: center;
+}
+.qw-protection-status {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+.qw-positions-table .qw-small-action {
+  display: block;
+  min-height: 44px;
+}
+.qw-mobile-positions .qw-small-action {
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .qw-trade-confirmation .qw-card-heading {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .qw-trade-confirmation h2 {
+    font-size: 20px;
+  }
+  .qw-review-details > div {
+    gap: 12px;
+  }
+  .qw-trade-receipt .qw-cost-breakdown dl > div {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .qw-trade-receipt .qw-cost-breakdown dd {
+    overflow-wrap: anywhere;
+  }
+}

@@ -8,6 +8,7 @@ import {
 } from "./market-data";
 import {
   demoReducer,
+  ASSETS,
   initialDemo,
   type Asset,
   type DemoAction,
@@ -147,6 +148,24 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
         if (action.type === "BUY")
           action = { ...action, entryPrice: undefined };
         if (action.type === "EDIT_TARGET") action = { ...action, live: false };
+      }
+      if (
+        action.type === "BUY" &&
+        ((action.expectedMarketMode !== undefined &&
+          action.expectedMarketMode !== snapshot.market.mode) ||
+          (action.expectedQuote !== undefined &&
+            action.expectedQuote !==
+              (action.entryPrice ?? ASSETS[action.asset]?.price)))
+      ) {
+        publish({
+          ...snapshot,
+          state: {
+            ...snapshot.state,
+            announcement:
+              "Market quote changed. Review the latest estimate and confirm again. No paper trade was opened.",
+          },
+        });
+        return;
       }
       const next = demoReducer(snapshot.state, action);
       if (next !== snapshot.state) write({ ...snapshot, state: next });

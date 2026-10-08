@@ -43,10 +43,10 @@ export default function Header() {
           ))}
         </nav>
         <div className="header-actions">
-          <a className="signin" href="#availability">
-            Sign in <span className="sr-only">availability information</span>
+          <a className="signin" href="/signin">
+            Sign in
           </a>
-          <Button href="/app">Get Started</Button>
+          <Button href="/signup">Get Started</Button>
         </div>
         <button
           type="button"
@@ -71,10 +71,14 @@ export default function Header() {
             {label}
           </a>
         ))}
-        <a href="#availability" onClick={() => setOpen(false)}>
-          Sign in availability
+        <a href="/signin" onClick={() => setOpen(false)}>
+          Sign in
         </a>
-        <a className="mobile-start" href="/app" onClick={() => setOpen(false)}>
+        <a
+          className="mobile-start"
+          href="/signup"
+          onClick={() => setOpen(false)}
+        >
           Get Started ↗
         </a>
       </nav>

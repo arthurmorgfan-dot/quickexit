@@ -11,7 +11,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "QuickExit Workspace — Interactive Trading Demo",
   description:
-    "Explore the QuickExit simulated trade-to-bank experience. All prices, positions, and transfers are mock data. No real funds or trades.",
+    "Explore the QuickExit simulated trade-to-bank experience. All trades, funds, and transfers are simulated. Optional accounts save paper trading across devices. No real funds or trades.",
   robots: { index: false, follow: true },
 };
 export default function AppPage() {

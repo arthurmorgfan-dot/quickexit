@@ -5,7 +5,7 @@ const questions = [
   ],
   [
     "Can I trade with QuickExit today?",
-    "Not yet. This page is an interactive product prototype. The prices and profits are illustrative, and no accounts, payments, or live trades are available. You can explore the preview without signing up.",
+    "You can explore simulated paper trading without signing up, or create an account to save it across devices when beta accounts are enabled. All trades and transfers are simulated. Live mode reads public market prices; no real payments or trading execution are available.",
   ],
   [
     "Is my profit target guaranteed?",

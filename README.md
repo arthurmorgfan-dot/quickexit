@@ -4,6 +4,8 @@ A responsive public landing page for the QuickExit crypto trading concept: **Tra
 
 ## Run locally
 
+Use Node.js 22 or newer (required by the Supabase SDK); this checkpoint was verified with Node.js 24.20.0.
+
 ```bash
 npm install
 npm run dev
@@ -31,7 +33,7 @@ Next.js App Router, React, TypeScript, and Lucide icons. Styling uses plain CSS,
 
 The interactive preview supports investment amounts, euro or percentage profit targets, optional protection, and an auto-exit switch. Its progress and euro amounts update locally. The action button explains the selected mock trade without submitting data. Mobile navigation, FAQ disclosures, and linked prototype notices are functional.
 
-This is a product concept only. Landing-page market figures are mock data; the paper workspace optionally reads public market quotes. There is no authentication, trading backend, payment processing, or partner integration. Get Started and Start Trading lead to the simulated `/app` workspace; Sign in leads to the availability notice. Privacy and Terms describe this prototype rather than a future live service.
+This is a product concept only. Landing-page market figures are mock data; the paper workspace optionally reads public market quotes. Optional Supabase accounts save paper state across devices. There is no real trading backend, payment processing, or financial partner integration. Header Get Started leads to `/signup`; Start Trading opens `/app`, and Sign in leads to `/signin`. Privacy and Terms describe this prototype rather than a future live service.
 
 ## Production identity
 
@@ -47,7 +49,7 @@ Landing anchor navigation opens linked prototype disclosures, moves keyboard foc
 
 To test the full flow:
 
-1. Open `/app`. Leave the default €100 amount, +€5 target, and enabled auto-exit. Click **Buy & Auto-Exit**.
+1. Open `/app`. Leave the default €100 amount, +€5 target, and enabled auto-exit. Click **Buy & Auto-Exit**, review the estimates, then **Confirm Paper Trade**.
 2. Pause **Subtle price movement** for exact, repeatable values. Click **Profit rises**: the position shows +€3.82 / 76% (if no tick occurred before pausing).
 3. Click **Reach target**: the position closes automatically at +€5 and makes €105 available.
 4. Click **Send to Bank**, then **Send €105.00 to Bank**. The placeholder account is •••• 4821. The screen confirms €105 sent home, and available cash returns to zero.
@@ -68,12 +70,12 @@ The active trade and completed-trade result appear before market information. Cu
 To test on a phone or a narrow responsive viewport (try 320, 390, 430, and 700px):
 
 1. Open `/app`, use bottom-nav Settings to pause subtle price movement, and return to Trade.
-2. Keep €100 / +€5 / auto-exit on and tap Buy & Auto-Exit. The profit card replaces the form and is brought into view.
+2. Keep €100 / +€5 / auto-exit on and tap **Buy & Auto-Exit**, review the estimates, then **Confirm Paper Trade**. The profit card replaces the form and is brought into view.
 3. Expand **Try a demo outcome**, tap **Profit rises**, then **Reach target**. Check +€3.82 / 76%, followed by the target-reached result.
 4. Tap **Send to Bank** and the simulated transfer action. Verify €105 sent home and €0 available.
 5. Inspect Positions, Activity, and Settings through bottom navigation. Test Edit Target, custom numeric fields, protection, and disclosures. Resize above 700px to verify the original desktop layout remains available.
 
-All transactions are simulated. No real accounts, banking data, payments, or trading execution are used.
+All transactions are simulated. No exchange accounts, banking data, payments, or real trading execution are used.
 
 ## Persistent local paper trading
 
@@ -81,7 +83,7 @@ All transactions are simulated. No real accounts, banking data, payments, or tra
 
 Restoration validates types, assets, cents, price bounds, position/exit consistency, unique IDs, and the cash-plus-sent ledger against real demo trade proceeds. Unknown properties are discarded; sample history is canonical and excluded from balances. Malformed data or unsupported versions start a clean demo with a recovery notice. Browser storage errors leave a usable temporary demo and a truthful “Not saved on this device” status.
 
-`src/lib/paper-trading-store.ts` manages hydration, immediate saves after domain actions, and reset. `usePersistentDemo.ts` connects it to React with `useSyncExternalStore`: SSR and initial client hydration share the same stable initial snapshot, storage is read only after mount, controls stay inert until restoration, and price movement starts only afterward. No offline demo price catch-up occurs. Live mode evaluates the next fresh market quote after refresh. Explicit saved movement preferences survive refresh; fresh/reset demos respect reduced-motion defaults. Other tabs on the same origin synchronize through storage events. This is device-local storage, not an account or cloud sync; concurrent edits use the last saved snapshot.
+`src/lib/paper-trading-store.ts` manages hydration, immediate saves after domain actions, and reset. `usePersistentDemo.ts` connects it to React with `useSyncExternalStore`: SSR and initial client hydration share the same stable initial snapshot, storage is read only after mount, controls stay inert until restoration, and price movement starts only afterward. No offline demo price catch-up occurs. Live mode evaluates the next fresh market quote after refresh. Explicit saved movement preferences survive refresh; fresh/reset demos respect reduced-motion defaults. Other tabs on the same origin synchronize through storage events. This section describes the guest demo: device-local edits use the last saved snapshot. Signed-in accounts use the revision-checked cloud layer described below.
 
 Settings → **Reset demo** opens an explicit confirmation before removing the owned key and restoring BTC, zero cash/sent totals, welcome activity, default settings, and the initial illustrative history. Cancellation does not modify storage. The next reload restores the clean initial demo. Unrelated localStorage keys are never cleared.
 
@@ -105,6 +107,53 @@ Investment is the entire funded budget in cents. Entry fee is rounded up against
 
 Euro targets and percentage targets both represent **net return on all invested capital**. The inverse target calculation includes rounded costs and produces the market price necessary for those net proceeds. Demo Reach target generates that price and passes through the same valuation/close path as Live; Profit rises/falls remain predictable net outcomes. Live quotes are never adjusted. Live target/protection gaps settle at the observed quote, so outcomes can exceed targets or losses can exceed protection. Editing a target closes at the current quote, preserving profit above the lowered threshold. Immediate opening costs may already meet a tight protection setting; the form warns and the engine closes accordingly.
 
-Schema v3 validates fills, fixed quantities, fees, valuations, receipts, unique position/request IDs and aggregate cash/sent conservation. V1/v2 positions retain their original zero-cost behavior, carry an explicit legacy label and upgrade on restoration without replaying activity. New trades use the current cost model. Stable request IDs prevent duplicate opens; position IDs guard stale sell/price callbacks; inactive/completed positions cannot close again. Transfer buttons use sequence guards, and refresh restores finalized records without running a sale or fee operation. Storage synchronization retains the existing last-writer policy across tabs; this client-only prototype is not a concurrent server ledger.
+Schema v3 validates fills, fixed quantities, fees, valuations, receipts, unique position/request IDs and aggregate cash/sent conservation. V1/v2 positions retain their original zero-cost behavior, carry an explicit legacy label and upgrade on restoration without replaying activity. New trades use the current cost model. Stable request IDs prevent duplicate opens; position IDs guard stale sell/price callbacks; inactive/completed positions cannot close again. Transfer buttons use sequence guards, and refresh restores finalized records without running a sale or fee operation. The guest demo retains its last-writer local policy; account sync uses atomic revision checks and operation receipts as described below. This is not a real-money ledger.
 
 Run `npm test` for original zero-cost regressions plus default-cost tests covering fees, rounding, configurable impact, euro/percentage targets, deterministic prices, live overshoots, protection, manual sale, duplicate operations, tampered records, migration and refresh/transfer persistence. Manual check: open €100 BTC with a +€5 target and no protection, inspect estimated costs, use Reach target, confirm €105 proceeds and refresh. The receipt retains the entry/exit fee and acquired quantity; Send to Bank still credits only simulated history.
+
+## Accounts and cloud-synced paper beta
+
+Try Demo remains at `/app?demo=1`, requires no registration and uses the existing `quickexit.paper-trading` storage key. `/app` restores an authenticated account when available; `/signin` and `/signup` provide minimal email/password forms. No exchange account, wallet, real payment, banking detail or exchange key is collected. All investment amounts, balances, sales and bank transfers remain simulated.
+
+### Supabase setup
+
+1. Create/select a Supabase project. Copy `.env.example` to `.env.local`, then set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from its Connect/API settings. A legacy **anon** key is also accepted. Do not use a service-role or secret key. There is no privileged key requirement.
+2. Apply `supabase/migrations/202610080001_paper_accounts.sql` once in the project SQL editor, or apply it with the Supabase CLI migration workflow. It creates `paper_workspaces`, `paper_operations`, RLS policies, restrictive grants and the atomic `commit_paper_workspace` function. Apply this before enabling the account UI in deployment.
+3. Enable Email authentication with email confirmation. Set Site URL to `https://quickexit.net`, add `https://quickexit.net/auth/callback` to allowed redirects, and add `http://localhost:3000/auth/callback` for local development. Configure an email delivery provider for beta confirmation messages. Use Supabase's PKCE-compatible email confirmation flow; it returns to `/auth/callback`, where the server exchanges the code for a cookie session. Confirm on the browser that initiated signup. Configure the provider password minimum to 12 characters (matching the signup form), rate limits and production SMTP in the Supabase dashboard.
+4. Set the same two public environment variables on the hosting platform and rebuild/redeploy; Next.js embeds public values at build time. Run `npm run dev` locally. Missing configuration leaves authentication disabled with an honest message and a working Try Demo path.
+
+No project URL/key is included in this repository. The SQL has been executed/tested in isolated PostgreSQL, but hosted email confirmation and real Supabase project deployment must be verified after project configuration. Suggested provider references: [Next.js SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+### Boundaries and storage
+
+`src/lib/supabase/browser.ts` owns the browser client. `server.ts` is server-only and owns request-cookie clients. `src/proxy.ts` refreshes sessions on auth/workspace routes; it does not protect the public demo. `/api/paper` independently calls server-side `auth.getUser()` on every request, does not trust a browser user ID, checks write Origin, bounds request bodies and validates the full existing paper schema/ledger before RPC writes. Account responses are private/no-store. `/auth/callback` has a fixed internal destination, never accepts a caller-controlled redirect, and does not log tokens. Only the public Supabase key is used.
+
+One account-scoped JSON aggregate includes active/completed positions, fixed execution receipts, activity, cash, sent-home total, selected asset and demo preferences. Atomic snapshot commits prevent partial sale/fee/activity/balance saves. RLS limits authenticated reads to `auth.uid() = user_id`; anonymous reads are denied. Direct table writes are revoked. The SQL function derives its owner from `auth.uid()`, requires authentication, uses an empty search path, locks the row, compares the expected revision and writes a unique operation receipt in the same transaction. Its grants are limited to authenticated callers. Database-side ownership and CAS remain enforced even when callers bypass the Next.js API. This is simulated user-owned data, not a trusted real-money ledger.
+
+`src/lib/account/workspace-store.ts` wraps the existing, unchanged execution store. Guests keep their original key. Account journals use `quickexit.account.<user-id>` and include the canonical device snapshot, confirmed cloud revision, queued changes and the exact in-flight operation ID/payload. The journal is written before sending; a lost response retries the same ID, so the database cannot add another revision/receipt or replay a sale. New changes queue behind the current operation. Authentication switches replace the active store synchronously; stale network responses cannot apply to a different account. Cross-device restoration never runs trade actions or fees. Price quotes are device caches (fresh live prices are fetched independently); active valuation and market mode are shared.
+
+Temporary outages retain a usable, validated account cache and queued edits. Initial restoration without a known account copy blocks mutations, so an outage cannot overwrite unknown cloud data with a blank/demo state. Retry and online recovery resume saves. Every 15 seconds, quiet accounts check for another device's saved revision. Simultaneous edits are not silently merged: both copies are kept and an explicit **Use cloud copy / Use this device's copy** choice resolves the conflict using another revision check. Discarded device state is backed up at the account key plus `.recovery`. Signed-in Reset demo clears the account's simulated aggregate on the next successful sync; the one-time import decision remains committed.
+
+Account caches remain in this browser after sign-out for offline recovery, isolated by user ID, and are not encrypted. Signing out restores the separate guest demo, not the account snapshot. Clearing browser storage removes these caches and any pending unsynced changes; it does not remove already-saved cloud data. Server-side RLS protects cloud records; local storage is not a security boundary against someone with access to the same browser profile. Supabase handles passwords/session credentials; QuickExit stores no banking details or exchange keys. Landing disclosures explain optional account storage.
+
+### One-time local migration
+
+An empty account with an existing meaningful local demo offers **Import this device's demo** or **Start fresh** before it can trade. Import copies the current validated state; it does not delete, merge or replay the guest demo. It is allowed once per account, atomically, only while the cloud aggregate is empty. Duplicate IDs retry safely, and distinct duplicate import requests are rejected once decided. A reset never re-enables import. New accounts with no meaningful demo start clean automatically. Existing account state always wins over an unsolicited local import.
+
+### Beta verification
+
+Run `npm test`, `npm run lint`, `npx tsc --noEmit`, and `npm run build`. Tests cover account transitions, import/retry/reset, device separation, full net execution lifecycle across refresh, offline journals, lost responses, conflicts, corrupted data and late responses. PGlite is a test-only PostgreSQL runtime: the actual migration is exercised with separate authenticated/anonymous roles to verify RLS, direct-write denial, ownership, atomic revision checks and duplicate import/receipt prevention. Tests do not create real Supabase users or send confirmation emails.
+
+With Supabase configured: make a €100/+€5 guest trade; create/confirm an account and import it. Refresh, sign out/in and sign in from a second browser: entry fill, active/completed positions, costs, history and cash must match. Reach target in Demo, send €105 to the simulated bank and verify the second device recovers €0 cash plus €105 sent home. Disconnect, make a paper change, reconnect and retry; then create conflicting edits on two devices to test explicit resolution. Sign into a second account to verify isolation. Confirm Reset demo and verify the guest demo is untouched and imports cannot be repeated.
+
+## v0.4: review, trade and receipt
+
+The existing Buy action now opens a review instead of an immediate paper fill. Confirm Paper Trade opens the simulated position; Go Back preserves the draft. Asset, account or Live/Demo changes discard the review. Live estimates follow the latest usable quote, and a quote/mode guard at the store boundary rejects stale confirmations rather than executing against the price the user did not review. No quote can be supplied by the review to override a Live provider price.
+
+`estimatePaperTrade` in `paper-execution.ts` uses `openPaper`, `valuePaper` and `priceForNetProfit` for every financial estimate, including break-even (zero net profit), euro/percentage targets and estimated future exit costs at target. Percentage targets are net returns on the entire investment. Fees and rounding are unchanged. Displayed prices/quantity are rounded for readability; the engine retains full precision. Targets and protection remain estimates, not execution guarantees.
+
+Completed history is newest closure first, with stacked mobile cards and a full receipt for each trade. `TradeReceipt.tsx` renders the `paperReceipt` projection from the saved entry and closing fill. Receipt IDs use the original unique request ID. Recorded entry, cost assumptions, closing valuation and completed position are frozen at closure and restoration. Receipt values never use a current quote or new fee defaults. Gross profit is quoted value change of acquired crypto; subtracting all recorded entry and exit costs gives net profit. Gross sale proceeds are before the exit fee.
+
+**No schema/database migration is needed.** Persistence remains v3: its existing execution snapshots already contain the durable receipt inputs, both timestamps and closing reason. The cloud aggregate/journal and transaction protections are unchanged. v1/v2 legacy cost-free records preserve original outcomes and explicitly disclose missing execution details/dates; no historical fees or fills are fabricated. Example history remains separate from simulated funds.
+
+Tests in `tests/paper-receipts.test.mjs` cover review calculations, cent/price precision, realized reconciliation, all three exit reasons, immutable receipts, unchanged v3 restoration, older schema compatibility, quote/mode guards and consumer rendering/history. To test manually: open `/app?demo=1`, choose €100 and +€5, click Buy & Auto-Exit, inspect Estimated before execution, Go Back, then Confirm Paper Trade. Reach target in Demo, inspect the fixed receipt, refresh and find it in Positions. Send proceeds to the simulated bank; the receipt and history remain unchanged. In Live, review estimates follow read-only quotes and Demo controls are absent.

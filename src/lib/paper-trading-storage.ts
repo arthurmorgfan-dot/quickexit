@@ -145,7 +145,7 @@ function position(
         : value.profit > -value.protection))
   )
     return null;
-  return {
+  const restored: Position = {
     id: value.id,
     asset: value.asset,
     amount: value.amount,
@@ -164,6 +164,7 @@ function position(
       ? {}
       : { exitPrice: value.exitPrice as number }),
   };
+  return status === "closed" ? Object.freeze(restored) : restored;
 }
 function activity(value: unknown): ActivityEvent | null {
   if (

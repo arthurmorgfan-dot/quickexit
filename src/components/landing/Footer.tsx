@@ -27,31 +27,37 @@ export default function Footer() {
         <details id="availability">
           <summary>Service availability</summary>
           <p>
-            QuickExit is not open for account registration or sign-in. Explore
-            the interactive product preview above; no authentication, deposits,
-            trades, or withdrawals are available.
+            QuickExit offers a simulated paper-trading preview with a
+            registration-free demo. Beta accounts can save paper state across
+            devices when enabled. No real deposits, trading execution, or
+            withdrawals are available.
           </p>
         </details>
         <details id="privacy">
           <summary>Prototype privacy notice</summary>
           <p>
-            This prototype has no account forms or analytics added by QuickExit.
-            Landing-page preview selections stay in browser memory and reset on
-            reload. Workspace paper-trading data is saved on this device until
-            you reset the demo or clear browser storage. No trade or payment
-            information is submitted. Hosting providers may process standard
-            request logs. A full privacy policy will be provided before a live
-            service launches.
+            Optional beta accounts use Supabase for email/password
+            authentication and account-scoped paper state. Passwords are handled
+            by Supabase Auth. No analytics are added by QuickExit. Landing-page
+            preview selections stay in browser memory and reset on reload.
+            Workspace paper-trading data is saved on this device until you reset
+            the demo or clear browser storage. Signed-in paper state is also
+            saved in your account; account caches remain on the device after
+            sign-out until browser storage is cleared. No real banking details,
+            payment information, or exchange keys are collected. Hosting
+            providers may process standard request logs. A full privacy policy
+            will be provided before a live service launches.
           </p>
         </details>
         <details id="terms">
           <summary>Prototype terms</summary>
           <p>
             This interface is for product demonstration only. It does not offer
-            financial advice or an operational trading service. All prices and
-            profits shown are mock data. There is no guarantee of future
-            availability or returns. Live services would require separate terms
-            and disclosures.
+            financial advice or an operational trading service. All trading
+            results and funds are simulated. The workspace may display read-only
+            public market prices. There is no guarantee of future availability
+            or returns. Live services would require separate terms and
+            disclosures.
           </p>
         </details>
       </div>

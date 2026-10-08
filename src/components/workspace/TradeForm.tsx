@@ -1,3 +1,4 @@
+import TradeConfirmation from "./TradeConfirmation";
 import {
   openPaper,
   valuePaper,
@@ -21,13 +22,19 @@ export default function TradeForm({
   dispatch,
   disabled = false,
   price,
+  live = false,
+  notice = "",
 }: {
   asset: Asset;
   disabled?: boolean;
   price?: number;
+  live?: boolean;
+  notice?: string;
   dispatch: Dispatch<DemoAction>;
 }) {
   const requestId = useRef<string | null>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const [reviewing, setReviewing] = useState(false);
   const [amount, setAmount] = useState("€100"),
     [amountCustom, setAmountCustom] = useState("100");
   const [target, setTarget] = useState("+€5"),
@@ -83,6 +90,10 @@ export default function TradeForm({
       return;
     }
     setError("");
+    setReviewing(true);
+  };
+  const confirm = () => {
+    if (disabled) return;
     requestId.current ??= crypto.randomUUID();
     dispatch({
       type: "BUY",
@@ -92,10 +103,41 @@ export default function TradeForm({
       target: targetCents,
       protection: protectionCents,
       autoExit: auto,
+      expectedQuote: price ?? ASSETS[asset].price,
+      expectedMarketMode: live ? "live" : "demo",
     });
   };
+  if (reviewing)
+    return (
+      <TradeConfirmation
+        asset={asset}
+        amount={amountCents}
+        target={targetCents}
+        targetLabel={
+          percent
+            ? `${targetValue}% net · ${signedEuro(targetCents)}`
+            : signedEuro(targetCents)
+        }
+        protection={protectionCents}
+        autoExit={auto}
+        price={price ?? ASSETS[asset].price}
+        disabled={disabled}
+        live={live}
+        notice={notice.startsWith("Market quote changed.") ? notice : ""}
+        onConfirm={confirm}
+        onBack={() => {
+          setReviewing(false);
+          requestAnimationFrame(() =>
+            form.current
+              ?.querySelector<HTMLButtonElement>('[type="submit"]')
+              ?.focus(),
+          );
+        }}
+      />
+    );
   return (
     <form
+      ref={form}
       className="qw-card qw-trade-form"
       onSubmit={submit}
       aria-labelledby="trade-form-title"
