@@ -26,10 +26,12 @@ export function ActivePosition({
   position: p,
   dispatch,
   playing,
+  live = false,
 }: {
   position: Position;
   dispatch: Dispatch<DemoAction>;
   playing: boolean;
+  live?: boolean;
 }) {
   const [editing, setEditing] = useState(false),
     [target, setTarget] = useState(String(p.target / 100)),
@@ -205,44 +207,46 @@ export function ActivePosition({
           </p>
         )}
       </form>
-      <MobileDisclosure
-        label="Try a demo outcome"
-        hint="Raise profit, lower it, or reach your target"
-        className="qw-demo-disclosure"
-      >
-        <div className="qw-demo-controls">
-          <div className="qw-demo-title">
-            <span>DEMO CONTROLS</span>
-            <span>Try an outcome</span>
+      {!live && (
+        <MobileDisclosure
+          label="Try a demo outcome"
+          hint="Raise profit, lower it, or reach your target"
+          className="qw-demo-disclosure"
+        >
+          <div className="qw-demo-controls">
+            <div className="qw-demo-title">
+              <span>DEMO CONTROLS</span>
+              <span>Try an outcome</span>
+            </div>
+            <div className="qw-demo-options">
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "MOVE", mode: "rise" })}
+              >
+                <TrendingUp size={13} /> Profit rises
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "MOVE", mode: "fall" })}
+              >
+                <TrendingDown size={13} /> Profit falls
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "MOVE", mode: "target" })}
+              >
+                <Check size={13} /> Reach target
+              </button>
+            </div>
+            <Switch
+              label="Subtle price movement"
+              description="Pause to explore at your own pace."
+              checked={playing}
+              onChange={(value) => dispatch({ type: "PLAY", value })}
+            />
           </div>
-          <div className="qw-demo-options">
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "MOVE", mode: "rise" })}
-            >
-              <TrendingUp size={13} /> Profit rises
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "MOVE", mode: "fall" })}
-            >
-              <TrendingDown size={13} /> Profit falls
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: "MOVE", mode: "target" })}
-            >
-              <Check size={13} /> Reach target
-            </button>
-          </div>
-          <Switch
-            label="Subtle price movement"
-            description="Pause to explore at your own pace."
-            checked={playing}
-            onChange={(value) => dispatch({ type: "PLAY", value })}
-          />
-        </div>
-      </MobileDisclosure>
+        </MobileDisclosure>
+      )}
       <p className="qw-micro">
         Simulation only. Real targets and protection are not guaranteed.
       </p>

@@ -11,8 +11,10 @@ import MobileDisclosure from "./MobileDisclosure";
 export default function TradeForm({
   asset,
   dispatch,
+  disabled = false,
 }: {
   asset: Asset;
+  disabled?: boolean;
   dispatch: Dispatch<DemoAction>;
 }) {
   const [amount, setAmount] = useState("€100"),
@@ -190,7 +192,7 @@ export default function TradeForm({
           {error}
         </p>
       )}
-      <ActionButton type="submit">
+      <ActionButton type="submit" disabled={disabled}>
         {auto ? "Buy & Auto-Exit" : "Buy & Monitor"}
       </ActionButton>
       <p className="qw-micro">

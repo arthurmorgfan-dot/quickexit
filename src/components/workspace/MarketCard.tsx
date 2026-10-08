@@ -22,24 +22,23 @@ export default function MarketCard({
   setAsset,
   locked,
   price,
+  live = false,
 }: {
   asset: Asset;
   setAsset: (asset: Asset) => void;
   locked: boolean;
   price: number;
+  live?: boolean;
 }) {
   const [timeframe, setTimeframe] = useState<keyof typeof paths>("1D");
   return (
-    <section
-      className="qw-card qw-market"
-      aria-label="Illustrative asset market"
-    >
+    <section className="qw-card qw-market" aria-label="Asset market overview">
       <div className="qw-card-heading">
         <label className="qw-overline" htmlFor="asset-choice">
           YOUR ASSET
         </label>
         <span className="qw-badge">
-          <span className="status-dot" /> SIMULATED MARKET
+          <span className="status-dot" /> {live ? "LIVE PRICES" : "DEMO PRICES"}
         </span>
       </div>
       <div className="qw-market-top">
@@ -64,12 +63,14 @@ export default function MarketCard({
             </select>
           </div>
         </div>
-        <span
-          className={`qw-market-change ${ASSETS[asset].change < 0 ? "qw-negative" : ""}`}
-        >
-          {ASSETS[asset].change > 0 ? "+" : ""}
-          {ASSETS[asset].change}% <small>illustrative 24h</small>
-        </span>
+        {!live && (
+          <span
+            className={`qw-market-change ${ASSETS[asset].change < 0 ? "qw-negative" : ""}`}
+          >
+            {ASSETS[asset].change > 0 ? "+" : ""}
+            {ASSETS[asset].change}% <small>illustrative 24h</small>
+          </span>
+        )}
       </div>
       <div className="qw-price">{priceEuro(price)}</div>
       <MobileDisclosure

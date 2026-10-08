@@ -22,6 +22,7 @@ import {
   currentPrice,
   type View,
 } from "@/lib/demo-trading";
+import { freshQuote } from "@/lib/market-data";
 import { ActionButton, Switch } from "./Controls";
 import MarketCard from "./MarketCard";
 import TradeForm from "./TradeForm";
@@ -57,6 +58,9 @@ export default function Workspace() {
     hydrated,
     storageStatus,
     recovered,
+    market,
+    marketStatus,
+    setMarketMode,
   } = usePersistentDemo();
   const [view, setView] = useState<View>("Trade"),
     [confirmReset, setConfirmReset] = useState(false);
@@ -115,14 +119,35 @@ export default function Workspace() {
     }
   }, [activeId, view]);
   useEffect(() => {
-    if (!hydrated || activeId === undefined || !state.playing) return;
+    if (
+      !hydrated ||
+      market.mode === "live" ||
+      activeId === undefined ||
+      !state.playing
+    )
+      return;
     const interval = window.setInterval(
       () => dispatch({ type: "MOVE", mode: "tick" }),
       4000,
     );
     return () => window.clearInterval(interval);
-  }, [activeId, state.playing, hydrated, dispatch]);
+  }, [activeId, state.playing, hydrated, dispatch, market.mode]);
   const selectedAsset = state.active?.asset ?? asset;
+  const live = market.mode === "live";
+  const quote = market.quotes[selectedAsset];
+  const usableQuote = !!quote && freshQuote(quote);
+  const marketLabel = live ? "Live market prices" : "Demo prices";
+  const marketMessage = !live
+    ? "Deterministic demo controls enabled."
+    : marketStatus === "loading"
+      ? quote
+        ? "Connecting… Last known prices stay in place."
+        : "Connecting… Demo reference price shown until a live quote arrives."
+      : marketStatus === "connected" && usableQuote
+        ? "Connected · Coinbase · updates every 30 seconds."
+        : quote
+          ? "Prices unavailable or stale. Last known values are held; live updates are paused. Switch to Demo to try an outcome."
+          : "Prices unavailable. Demo reference price shown; live updates and new trades are paused. Switch to Demo to try an outcome.";
   const realised = state.completed
     .filter((p) => !p.example)
     .reduce((sum, p) => sum + p.profit, 0);
@@ -238,16 +263,19 @@ export default function Workspace() {
           <div className="qw-prototype-notice">
             <FlaskConical size={15} />
             <p>
-              You’re in the demo. All prices, trades, and transfers are
-              simulated. No real funds are used.
+              You’re in the demo. All trades and transfers are simulated. No
+              real funds are used.
             </p>
           </div>
+          <p className="qw-market-status" role="status">
+            <strong>{marketLabel}</strong> · {marketMessage}
+          </p>
           {view === "Trade" && (
             <>
               <div className="qw-trade-layout">
                 <MobileDisclosure
                   label="Market overview"
-                  hint={`${selectedAsset} · simulated prices`}
+                  hint={`${selectedAsset} · ${marketLabel}`}
                   className="qw-market-disclosure"
                   enabled={!!state.active || !!state.lastClosed}
                 >
@@ -256,10 +284,13 @@ export default function Workspace() {
                       asset={selectedAsset}
                       setAsset={setAsset}
                       locked={!!state.active}
+                      live={live}
                       price={
-                        state.active
-                          ? currentPrice(state.active)
-                          : ASSETS[selectedAsset].price
+                        live && quote
+                          ? quote.price
+                          : state.active
+                            ? currentPrice(state.active)
+                            : ASSETS[selectedAsset].price
                       }
                     />
                     <div className="qw-plan-card">
@@ -301,6 +332,7 @@ export default function Workspace() {
                     position={state.active}
                     dispatch={dispatch}
                     playing={state.playing}
+                    live={live}
                   />
                 ) : state.lastClosed ? (
                   <ClosedPosition
@@ -310,7 +342,11 @@ export default function Workspace() {
                     onNewTrade={newTrade}
                   />
                 ) : (
-                  <TradeForm asset={asset} dispatch={dispatch} />
+                  <TradeForm
+                    asset={asset}
+                    dispatch={dispatch}
+                    disabled={live && !usableQuote}
+                  />
                 )}
               </div>
               <section className="qw-card qw-recent">
@@ -434,12 +470,41 @@ export default function Workspace() {
                   <h2>Demo preferences</h2>
                   <span className="qw-badge">LOCAL ONLY</span>
                 </div>
-                <Switch
-                  label="Subtle price movement"
-                  description="Active positions move slightly every four seconds. Reduced-motion preferences pause this by default."
-                  checked={state.playing}
-                  onChange={(value) => dispatch({ type: "PLAY", value })}
-                />
+                <div className="qw-setting-info">
+                  <span id="market-data-label">Market data</span>
+                  <div
+                    className="qw-options"
+                    role="group"
+                    aria-labelledby="market-data-label"
+                  >
+                    {(["live", "demo"] as const).map((mode) => (
+                      <button
+                        type="button"
+                        key={mode}
+                        aria-pressed={market.mode === mode}
+                        className={market.mode === mode ? "is-selected" : ""}
+                        onClick={() => setMarketMode(mode)}
+                      >
+                        {mode === "live" ? "Live" : "Demo"}
+                      </button>
+                    ))}
+                  </div>
+                  <p>
+                    Live uses public EUR market quotes from Coinbase. Demo
+                    enables predictable outcomes. Switching keeps your entry
+                    price fixed; returning to Live may trigger a paper exit at
+                    the next market update. Charts remain illustrative. No real
+                    trades or funds.
+                  </p>
+                </div>
+                {!live && (
+                  <Switch
+                    label="Subtle price movement"
+                    description="Active positions move slightly every four seconds. Reduced-motion preferences pause this by default."
+                    checked={state.playing}
+                    onChange={(value) => dispatch({ type: "PLAY", value })}
+                  />
+                )}
                 <div className="qw-setting-info">
                   <span>Device storage</span>
                   <strong role="status">{saveLabel}</strong>
@@ -537,8 +602,9 @@ export default function Workspace() {
                   With clear boundaries.
                 </h2>
                 <p>
-                  No accounts. No deposits. No bank details. Everything happens
-                  locally in this browser on this device. Refreshing keeps your
+                  No accounts. No deposits. No bank details. Paper trading
+                  happens locally in this browser on this device. Live mode only
+                  reads public market prices. Refreshing keeps your
                   paper-trading state; Reset demo clears it.
                 </p>
                 <p>

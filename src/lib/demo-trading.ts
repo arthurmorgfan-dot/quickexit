@@ -20,6 +20,8 @@ export type Position = {
   status: "active" | "closed";
   reason?: ExitReason;
   example?: boolean;
+  /** Observed market price at a paper exit; never an execution price. */
+  exitPrice?: number;
 };
 export type ActivityEvent = {
   id: number;
@@ -128,10 +130,12 @@ export type DemoAction =
       target: number;
       protection: number | null;
       autoExit: boolean;
+      entryPrice?: number;
     }
   | { type: "MOVE"; mode: "rise" | "fall" | "target" | "tick" }
+  | { type: "MARKET_PRICE"; price: number }
   | { type: "SELL" }
-  | { type: "EDIT_TARGET"; target: number }
+  | { type: "EDIT_TARGET"; target: number; live?: boolean }
   | { type: "TRANSFER" }
   | { type: "PLAY"; value: boolean }
   | { type: "NEW_TRADE" }
@@ -177,11 +181,31 @@ function close(
     announcement: `${reasonLabel(closed)}. Position closed ${reason === "manual" ? "manually" : "automatically"}. ${signedEuro(closed.profit)}. ${euro(next.cash)} available to send home.`,
   };
 }
-function evaluate(state: DemoState, p: Position): DemoState {
+function evaluate(
+  state: DemoState,
+  p: Position,
+  marketPrice?: number,
+): DemoState {
   if (p.protection !== null && p.profit <= -p.protection)
-    return close(state, { ...p, profit: -p.protection }, "protection");
+    return close(
+      state,
+      {
+        ...p,
+        profit: marketPrice === undefined ? -p.protection : p.profit,
+        ...(marketPrice === undefined ? {} : { exitPrice: marketPrice }),
+      },
+      "protection",
+    );
   if (p.autoExit && p.profit >= p.target)
-    return close(state, { ...p, profit: p.target }, "target");
+    return close(
+      state,
+      {
+        ...p,
+        profit: marketPrice === undefined ? p.target : p.profit,
+        ...(marketPrice === undefined ? {} : { exitPrice: marketPrice }),
+      },
+      "target",
+    );
   return { ...state, active: p };
 }
 export function demoReducer(state: DemoState, action: DemoAction): DemoState {
@@ -189,6 +213,10 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case "BUY": {
       if (
         state.active ||
+        (action.entryPrice !== undefined &&
+          (!Number.isFinite(action.entryPrice) ||
+            action.entryPrice <= 0 ||
+            action.entryPrice > 1e9)) ||
         !Number.isSafeInteger(action.amount) ||
         action.amount < 100 ||
         action.amount > 1000000 ||
@@ -207,7 +235,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         target: action.target,
         protection: action.protection,
         autoExit: action.autoExit,
-        entryPrice: ASSETS[action.asset].price,
+        entryPrice: action.entryPrice ?? ASSETS[action.asset].price,
         profit: 0,
         status: "active",
       };
@@ -232,6 +260,26 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         ...next,
         announcement: `${euro(position.amount)} ${position.asset} demo trade opened. Target ${signedEuro(position.target)}. No real funds used.`,
       };
+    }
+    case "MARKET_PRICE": {
+      const p = state.active;
+      if (
+        !p ||
+        !Number.isFinite(action.price) ||
+        action.price <= 0 ||
+        action.price > 1e9
+      )
+        return state;
+      const profit = Math.max(
+        -p.amount + 1,
+        Math.round(p.amount * (action.price / p.entryPrice - 1)),
+      );
+      if (
+        !Number.isSafeInteger(profit) ||
+        !Number.isSafeInteger(p.amount + profit)
+      )
+        return state;
+      return evaluate(state, { ...p, profit }, action.price);
     }
     case "MOVE": {
       if (!state.active) return state;
@@ -280,6 +328,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           announcement: `Profit target updated to ${signedEuro(action.target)}.`,
         },
         { ...state.active, target: action.target },
+        action.live ? currentPrice(state.active) : undefined,
       );
     }
     case "TRANSFER": {

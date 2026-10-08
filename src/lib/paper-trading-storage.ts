@@ -1,4 +1,10 @@
 import {
+  initialMarket,
+  validQuote,
+  type MarketSettings,
+  type MarketQuote,
+} from "./market-data";
+import {
   ASSETS,
   initialDemo,
   type Asset,
@@ -9,11 +15,15 @@ import {
 
 /** One owned key; incompatible schema versions start a clean demo rather than guessing. */
 export const PAPER_TRADING_KEY = "quickexit.paper-trading";
-export const PAPER_TRADING_VERSION = 1;
+export const PAPER_TRADING_VERSION = 2;
 const MAX_STORED_LENGTH = 2_000_000;
 const MAX_HISTORY = 10_000;
 export type DeviceStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
-export type PaperTrading = { asset: Asset; state: DemoState };
+export type PaperTrading = {
+  asset: Asset;
+  state: DemoState;
+  market?: MarketSettings;
+};
 export type Restoration = PaperTrading & {
   source: "empty" | "restored" | "recovered" | "unavailable";
 };
@@ -59,6 +69,19 @@ function position(value: unknown, status: Position["status"]): Position | null {
   const example = value.example === true;
   if (example !== value.id < 0 || (example && status !== "closed")) return null;
   if (
+    value.exitPrice !== undefined &&
+    (status !== "closed" ||
+      !validQuote({ price: value.exitPrice, updatedAt: 1 }) ||
+      value.profit !==
+        Math.max(
+          -value.amount + 1,
+          Math.round(
+            value.amount * ((value.exitPrice as number) / value.entryPrice - 1),
+          ),
+        ))
+  )
+    return null;
+  if (
     status === "active" &&
     (value.reason !== undefined ||
       (value.autoExit && value.profit >= value.target) ||
@@ -73,13 +96,19 @@ function position(value: unknown, status: Position["status"]): Position | null {
   if (
     status === "closed" &&
     value.reason === "target" &&
-    (!value.autoExit || value.profit !== value.target)
+    (!value.autoExit ||
+      (value.exitPrice === undefined
+        ? value.profit !== value.target
+        : value.profit < value.target))
   )
     return null;
   if (
     status === "closed" &&
     value.reason === "protection" &&
-    (value.protection === null || value.profit !== -value.protection)
+    (value.protection === null ||
+      (value.exitPrice === undefined
+        ? value.profit !== -value.protection
+        : value.profit > -value.protection))
   )
     return null;
   return {
@@ -96,6 +125,9 @@ function position(value: unknown, status: Position["status"]): Position | null {
       ? { reason: value.reason as Position["reason"] }
       : {}),
     ...(example ? { example: true } : {}),
+    ...(value.exitPrice === undefined
+      ? {}
+      : { exitPrice: value.exitPrice as number }),
   };
 }
 function activity(value: unknown): ActivityEvent | null {
@@ -122,11 +154,29 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
     const data: unknown = JSON.parse(raw);
     if (
       !record(data) ||
-      data.version !== PAPER_TRADING_VERSION ||
+      (data.version !== PAPER_TRADING_VERSION && data.version !== 1) ||
       !isAsset(data.selectedAsset) ||
       !record(data.state)
     )
       return null;
+    const market = initialMarket();
+    if (data.version === PAPER_TRADING_VERSION && data.market !== undefined) {
+      if (
+        !record(data.market) ||
+        !["live", "demo"].includes(String(data.market.mode)) ||
+        !record(data.market.quotes)
+      )
+        return null;
+      market.mode = data.market.mode as MarketSettings["mode"];
+      for (const asset of Object.keys(ASSETS) as Asset[]) {
+        const q = data.market.quotes[asset];
+        if (q !== undefined && validQuote(q))
+          market.quotes[asset] = {
+            price: q.price,
+            updatedAt: q.updatedAt,
+          } as MarketQuote;
+      }
+    }
     const s = data.state;
     if (
       !Array.isArray(s.completed) ||
@@ -194,6 +244,7 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
     const maxId = Math.max(0, ...ids, ...validEvents.map((e) => e.id));
     return {
       asset: data.selectedAsset,
+      market,
       state: {
         active,
         completed: [...realCompleted, ...examples],
@@ -230,6 +281,7 @@ export function encodePaperTrading(snapshot: PaperTrading): string {
   return JSON.stringify({
     version: PAPER_TRADING_VERSION,
     selectedAsset: snapshot.asset,
+    market: snapshot.market ?? initialMarket(),
     state: {
       active,
       completed,
@@ -246,7 +298,11 @@ export function encodePaperTrading(snapshot: PaperTrading): string {
 }
 
 export function loadPaperTrading(storage: DeviceStorage): Restoration {
-  const clean = { asset: "BTC" as const, state: initialDemo() };
+  const clean = {
+    asset: "BTC" as const,
+    state: initialDemo(),
+    market: initialMarket(),
+  };
   try {
     const raw = storage.getItem(PAPER_TRADING_KEY);
     if (raw === null) return { ...clean, source: "empty" };

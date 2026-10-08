@@ -1945,3 +1945,15 @@
   flex-basis: 100%;
   margin-top: 0;
 }
+
+.qw-market-status {
+  color: var(--qw-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: -8px 0 20px;
+  overflow-wrap: anywhere;
+}
+.qw-market-status strong {
+  color: var(--foreground);
+  font-weight: 500;
+}

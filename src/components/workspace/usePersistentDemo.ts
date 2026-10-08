@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPaperTradingStore } from "@/lib/paper-trading-store";
+import { createCoinbaseProvider, watchMarket } from "@/lib/market-data";
 import { PAPER_TRADING_KEY } from "@/lib/paper-trading-storage";
 
 export default function usePersistentDemo() {
@@ -24,10 +25,19 @@ export default function usePersistentDemo() {
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
   }, [store]);
+  useEffect(() => {
+    if (!snapshot.hydrated || snapshot.market.mode !== "live") return;
+    return watchMarket(
+      createCoinbaseProvider(),
+      store.receiveMarketQuotes,
+      store.setMarketStatus,
+    );
+  }, [store, snapshot.hydrated, snapshot.market.mode]);
   return {
     ...snapshot,
     dispatch: store.dispatch,
     setAsset: store.setAsset,
+    setMarketMode: store.setMarketMode,
     resetDemo: () =>
       store.reset(
         window.matchMedia("(prefers-reduced-motion: reduce)").matches,
