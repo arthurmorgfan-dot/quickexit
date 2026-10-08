@@ -158,7 +158,7 @@ test("deterministic Reach target generates a net-paying quote instead of overwri
   s = reduce(s, { type: "MOVE", mode: "target" });
   const p = s.lastClosed;
   assert.equal(p.profit, 500);
-  assert.equal(s.cash, 10500);
+  assert.equal(s.cash, 1000500);
   assert.ok(currentPrice(p) > 63000);
   assert.equal(p.execution.exit.netProfit, 500);
   assert.equal(p.execution.exit.proceeds, 10500);
@@ -178,9 +178,9 @@ test("Live quotes use net P&L, require the cost-adjusted target and preserve mar
   assert.equal(s.active, null);
   assert.equal(s.lastClosed.exitPrice, 64200);
   assert.equal(s.lastClosed.profit, 550);
-  assert.equal(s.cash, 10550);
+  assert.equal(s.cash, 1000550);
   assert.equal(s.lastClosed.execution.exit.exitFee, 64);
-  assert.equal(s.lastClosed.execution.exit.proceeds, s.cash);
+  assert.equal(s.lastClosed.execution.exit.proceeds + 990000, s.cash);
 });
 test("protection uses net loss and observed Live prices, without guaranteeing the loss threshold", () => {
   let s = reduce(initialDemo(), order({ protection: 200 }));
@@ -188,24 +188,24 @@ test("protection uses net loss and observed Live prices, without guaranteeing th
   assert.equal(s.active, null);
   assert.equal(s.lastClosed.reason, "protection");
   assert.equal(s.lastClosed.profit, -239);
-  assert.equal(s.cash, 9761);
+  assert.equal(s.cash, 999761);
   const demo = reduce(reduce(initialDemo(), order({ protection: 200 })), {
     type: "MOVE",
     mode: "fall",
   });
   assert.equal(demo.lastClosed.profit, -200);
-  assert.equal(demo.cash, 9800);
+  assert.equal(demo.cash, 999800);
   assert.equal(valuePaper(10000, demo.lastClosed.execution).netProfit, -200);
   const immediate = reduce(initialDemo(), order({ protection: 100 }));
   assert.equal(immediate.lastClosed.profit, -140);
-  assert.equal(immediate.cash, 9860);
+  assert.equal(immediate.cash, 999860);
 });
 test("manual sale settles net proceeds once; lowering a target sells at the existing quote", () => {
   let s = reduce(initialDemo(), order());
   s = reduce(s, { type: "MARKET_PRICE", price: 61200 });
   s = reduce(s, { type: "SELL" });
   assert.equal(s.lastClosed.profit, 57);
-  assert.equal(s.cash, 10057);
+  assert.equal(s.cash, 1000057);
   assert.equal(s.lastClosed.execution.exit.exitFee, 61);
   assert.equal(reduce(s, { type: "SELL" }), s);
   let edit = reduce(reduce(initialDemo(), order()), {
@@ -214,7 +214,7 @@ test("manual sale settles net proceeds once; lowering a target sells at the exis
   });
   const price = currentPrice(edit.active);
   edit = reduce(edit, { type: "EDIT_TARGET", target: 300 });
-  assert.equal(edit.cash, 10382);
+  assert.equal(edit.cash, 1000382);
   assert.equal(currentPrice(edit.lastClosed), price);
 });
 test("target events, sale retries, duplicate order IDs and stale callbacks cannot duplicate proceeds or activity", () => {
@@ -252,7 +252,7 @@ test("refresh preserves fixed fill inputs, closed receipt, fees, cash and transf
   const closed = next.getSnapshot().state;
   next = fresh();
   assert.deepEqual(next.getSnapshot().state.completed, closed.completed);
-  assert.equal(next.getSnapshot().state.cash, 10500);
+  assert.equal(next.getSnapshot().state.cash, 1000500);
   const history = next.getSnapshot().state.events;
   next.dispatch({ type: "SELL" });
   next.dispatch({ type: "MOVE", mode: "target" });
@@ -261,14 +261,15 @@ test("refresh preserves fixed fill inputs, closed receipt, fees, cash and transf
   next.dispatch({ type: "TRANSFER", expectedSequence: sequence });
   next = fresh();
   assert.equal(next.getSnapshot().state.cash, 0);
-  assert.equal(next.getSnapshot().state.sent, 10500);
+  assert.equal(next.getSnapshot().state.sent, 1000500);
   const sent = next.getSnapshot().state;
   next.dispatch({ type: "TRANSFER", expectedSequence: sequence });
   assert.equal(next.getSnapshot().state, sent);
   next.dispatch(order({ requestId: "later" }));
   next.dispatch({ type: "MOVE", mode: "target" });
   next.dispatch({ type: "TRANSFER", expectedSequence: sequence });
-  assert.equal(next.getSnapshot().state.cash, 10500);
+  assert.equal(next.getSnapshot().state.cash, 0);
+  assert.equal(next.getSnapshot().state.active, null); // No new trade after sending all virtual cash.
 });
 test("restoration rejects changed quantities, fees, assumptions, valuations and receipts", () => {
   const { store, storage } = setup();
@@ -319,8 +320,8 @@ test("v1 and v2 migrate active/closed cost-free trades without charging fees or 
     assert.equal(migrated.getSnapshot().state.active.execution, undefined);
     assert.equal(migrated.getSnapshot().state.active.legacy, true);
     migrated.dispatch({ type: "SELL" });
-    assert.equal(migrated.getSnapshot().state.cash, 10200);
-    assert.equal(fresh().getSnapshot().state.cash, 10200);
+    assert.equal(migrated.getSnapshot().state.cash, 1000200);
+    assert.equal(fresh().getSnapshot().state.cash, 1000200);
     // Seed the next legacy fixture afresh.
     store.reset();
     store.dispatch(

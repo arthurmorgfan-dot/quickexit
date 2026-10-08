@@ -44,6 +44,8 @@ export type DemoState = {
   active: Position | null;
   completed: Position[];
   cash: number;
+  /** Fixed funding basis; absent on preserved pre-portfolio snapshots. */
+  portfolioCapital?: number;
   sent: number;
   lastClosed: Position | null;
   lastTransfer: number;
@@ -123,14 +125,15 @@ export function initialDemo(): DemoState {
   return {
     active: null,
     completed: examples,
-    cash: 0,
+    cash: 1_000_000,
+    portfolioCapital: 1_000_000,
     sent: 0,
     lastClosed: null,
     lastTransfer: 0,
     events: [
       {
         id: 0,
-        text: "Your demo is ready. Start with one trade.",
+        text: "Your €10,000 virtual portfolio is ready. No real money is used.",
         kind: "info",
       },
     ],
@@ -195,6 +198,15 @@ function close(
         },
       }
     : undefined;
+  const proceeds =
+    execution?.exit.proceeds ?? position.amount + position.profit;
+  if (
+    !Number.isSafeInteger(proceeds) ||
+    proceeds < 0 ||
+    !Number.isSafeInteger(state.cash + proceeds) ||
+    !Number.isSafeInteger(state.cash + proceeds + state.sent)
+  )
+    return state;
   if (execution) sealPaperExecution(execution);
   const closed: Position = {
     ...position,
@@ -214,7 +226,8 @@ function close(
     active: null,
     lastClosed: closed,
     completed: [closed, ...state.completed],
-    cash: state.cash + closed.amount + closed.profit,
+    cash: state.cash + proceeds,
+    portfolioCapital: state.portfolioCapital ?? legacyCapital(state),
     lastTransfer: 0,
   };
   if (reason === "target")
@@ -294,6 +307,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         !Number.isSafeInteger(action.amount) ||
         action.amount < 100 ||
         action.amount > 1000000 ||
+        !Number.isSafeInteger(state.cash) ||
+        state.cash < 0 ||
+        action.amount > state.cash ||
         !Number.isSafeInteger(action.target) ||
         action.target < 1 ||
         (action.protection !== null &&
@@ -329,6 +345,8 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       let next: DemoState = {
         ...state,
         active: position,
+        cash: state.cash - action.amount,
+        portfolioCapital: state.portfolioCapital ?? legacyCapital(state),
         lastClosed: null,
         lastTransfer: 0,
         tick: 0,
@@ -448,7 +466,8 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       );
     }
     case "TRANSFER": {
-      if (state.cash <= 0) return state;
+      if (state.cash <= 0 || !Number.isSafeInteger(state.cash + state.sent))
+        return state;
       const next = event(
         state,
         `${euro(state.cash)} sent to bank •••• 4821 (simulated)`,
@@ -472,4 +491,35 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         announcement: "Demo reset. No real funds were affected.",
       };
   }
+}
+
+/** Historical funding is inferred without adding funds or changing saved receipts. */
+export function legacyCapital(state: DemoState): number {
+  const closed = state.completed.filter((p) => !p.example);
+  return (
+    state.cash +
+    state.sent +
+    (state.active?.amount ?? 0) -
+    closed.reduce((sum, p) => sum + p.profit, 0)
+  );
+}
+/** Portfolio value is estimated liquidation value after simulated exit costs. */
+export function portfolioSummary(state: DemoState) {
+  const unrealized = state.active
+    ? state.active.execution
+      ? valuePaper(state.active.amount, state.active.execution).netProfit
+      : state.active.profit
+    : 0;
+  const realized = state.completed
+    .filter((p) => !p.example)
+    .reduce((sum, p) => sum + p.profit, 0);
+  const invested = state.active?.amount ?? 0;
+  return {
+    cash: state.cash,
+    invested,
+    value: state.cash + invested + unrealized,
+    realized,
+    unrealized,
+    netProfit: realized + unrealized,
+  };
 }

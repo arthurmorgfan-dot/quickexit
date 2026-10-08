@@ -15,6 +15,7 @@ import {
 } from "./demo-trading";
 import {
   isAsset,
+  PAPER_TRADING_KEY,
   clearPaperTrading,
   loadPaperTrading,
   savePaperTrading,
@@ -40,6 +41,7 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
     recovered: false,
   };
   let snapshot = serverSnapshot;
+  let recoveryBlocked = false;
   const listeners = new Set<() => void>();
   const publish = (next: DeviceSnapshot) => {
     snapshot = next;
@@ -55,9 +57,11 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
   const write = (next: DeviceSnapshot) =>
     publish({
       ...next,
-      storageStatus: attempt((storage) => savePaperTrading(storage, next))
-        ? "saved"
-        : "unavailable",
+      storageStatus:
+        !recoveryBlocked &&
+        attempt((storage) => savePaperTrading(storage, next))
+          ? "saved"
+          : "unavailable",
     });
   const restore = (reducedMotion: boolean, initial: boolean) => {
     let restored;
@@ -87,13 +91,30 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
       restored.source === "recovered" ||
       ("migrated" in restored && restored.migrated) ||
       (initial && restored.source === "empty")
-    )
+    ) {
+      // Preserve unreadable progress before replacing the owned key.
+      if (restored.source === "recovered") {
+        try {
+          const storage = getStorage();
+          const raw = storage.getItem(PAPER_TRADING_KEY);
+          if (raw !== null) {
+            const key = `${PAPER_TRADING_KEY}.recovery.${Date.now()}`;
+            storage.setItem(key, raw);
+            if (storage.getItem(key) !== raw) throw new Error("Backup failed");
+          }
+        } catch {
+          recoveryBlocked = true;
+          publish({ ...next, storageStatus: "unavailable" });
+          return;
+        }
+      }
       write(next);
-    else publish(next);
+    } else publish(next);
   };
   const reset = (reducedMotion = false) => {
     if (!snapshot.hydrated) return;
     const removed = attempt(clearPaperTrading);
+    if (removed) recoveryBlocked = false;
     const clean = initialDemo();
     // Keep the storage key absent after reset. A reload produces this same clean state.
     publish({

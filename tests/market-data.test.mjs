@@ -106,8 +106,8 @@ test("live quotes calculate P&L from a fixed entry and close at the observed mar
   assert.equal(state.active, null);
   assert.equal(state.lastClosed.profit, 600);
   assert.equal(state.lastClosed.exitPrice, 63600);
-  assert.equal(state.cash, 10600);
-  assert.equal(fresh().getSnapshot().state.cash, 10600);
+  assert.equal(state.cash, 1000600);
+  assert.equal(fresh().getSnapshot().state.cash, 1000600);
 });
 test("live protection, manual sell, edited targets, and auto-exit off keep accounting restorable", () => {
   for (const scenario of ["protection", "manual", "edit", "off"]) {
@@ -128,7 +128,7 @@ test("live protection, manual sell, edited targets, and auto-exit off keep accou
     if (scenario === "off") store.receiveMarketQuotes(quotes(66000));
     const state = store.getSnapshot().state;
     if (scenario === "off") assert.equal(state.active.profit, 1000);
-    else assert.equal(state.cash, scenario === "protection" ? 9800 : 10200);
+    else assert.equal(state.cash, scenario === "protection" ? 999800 : 1000200);
     assert.deepEqual(fresh().getSnapshot().state.active, state.active);
     assert.equal(fresh().getSnapshot().state.cash, state.cash);
   }
@@ -180,7 +180,7 @@ test("Live ↔ Demo disables manipulations in Live, retains entries, and ignores
   assert.equal(store.getSnapshot().state.active.entryPrice, 60000);
   store.setMarketMode("demo");
   store.dispatch({ type: "MOVE", mode: "target" });
-  assert.equal(store.getSnapshot().state.cash, 10500);
+  assert.equal(store.getSnapshot().state.cash, 1000500);
 });
 test("mode, cached prices and active P&L survive refresh; failures hold last value; reset clears market settings", () => {
   const { store, fresh, storage } = setup();

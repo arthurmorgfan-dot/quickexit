@@ -189,11 +189,11 @@ test("another browser restores the full realistic execution lifecycle, cash and 
   assert.deepEqual(other.getSnapshot().state.active, opened);
   other.dispatch({ type: "MOVE", mode: "target" });
   await settle();
-  assert.equal(other.getSnapshot().state.cash, 10500);
+  assert.equal(other.getSnapshot().state.cash, 1000500);
   const closed = other.getSnapshot().state.lastClosed;
   const receipt = paperReceipt(closed.amount, closed.execution);
   await s.retry();
-  assert.equal(s.getSnapshot().state.cash, 10500);
+  assert.equal(s.getSnapshot().state.cash, 1000500);
   assert.equal(s.getSnapshot().state.active, null);
   assert.deepEqual(
     paperReceipt(closed.amount, s.getSnapshot().state.lastClosed.execution),
@@ -209,7 +209,7 @@ test("another browser restores the full realistic execution lifecycle, cash and 
   const reload = f.fresh();
   await reload.setAccount(A);
   assert.equal(reload.getSnapshot().state.cash, 0);
-  assert.equal(reload.getSnapshot().state.sent, 10500);
+  assert.equal(reload.getSnapshot().state.sent, 1000500);
   const recovered = reload
     .getSnapshot()
     .state.completed.find((p) => !p.example);
@@ -279,7 +279,7 @@ test("a lost commit response retries its operation ID without duplicate closes, 
   assert.equal(reload.getSnapshot().syncStatus, "saved");
   assert.equal(f.commits(), committed);
   assert.deepEqual(JSON.parse(f.row(A.id).raw).state, before);
-  assert.equal(reload.getSnapshot().state.cash, 10500);
+  assert.equal(reload.getSnapshot().state.cash, 1000500);
   s.dispose();
   reload.dispose();
 });
@@ -478,7 +478,7 @@ test("mutations queued behind a lost in-flight response survive a refresh in ord
   await settle();
   s.dispatch({ type: "MOVE", mode: "target" });
   await settle();
-  assert.equal(s.getSnapshot().state.cash, 10500);
+  assert.equal(s.getSnapshot().state.cash, 1000500);
   const journal = JSON.parse(f.storage.getItem(accountKey(A.id)));
   assert.ok(journal.inflight);
   assert.equal(journal.queued, true);
@@ -486,7 +486,7 @@ test("mutations queued behind a lost in-flight response survive a refresh in ord
   const next = f.fresh();
   await next.setAccount(A);
   assert.equal(next.getSnapshot().syncStatus, "saved");
-  assert.equal(next.getSnapshot().state.cash, 10500);
+  assert.equal(next.getSnapshot().state.cash, 1000500);
   assert.equal(f.commits(), 2);
   assert.equal(
     JSON.parse(f.row(A.id).raw).state.completed.filter((p) => !p.example)
@@ -575,7 +575,7 @@ test("expired authorization gates account mutations and preserves the exact pend
   await settle();
   const restored = f.fresh();
   await restored.setAccount(A);
-  assert.equal(restored.getSnapshot().state.cash, 10500);
+  assert.equal(restored.getSnapshot().state.cash, 1000500);
   assert.equal(
     restored.getSnapshot().state.completed.filter((p) => !p.example).length,
     1,

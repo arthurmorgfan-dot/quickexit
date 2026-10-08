@@ -69,13 +69,13 @@ export default function Hero() {
           position back into money you can send home.
         </p>
         <div className="hero-actions">
-          <Button href="/app">Start Trading</Button>
+          <Button href="/app">Try €10,000 Demo</Button>
           <Button href="#how-it-works" secondary>
             See how it works
           </Button>
         </div>
         <div className="hero-caption">
-          <Check size={14} /> Your target. Your exit. Your money.
+          <Check size={14} /> €10,000 virtual EUR. No account needed.
         </div>
       </div>
       <div className="hero-visual">

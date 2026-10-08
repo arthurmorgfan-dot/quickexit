@@ -24,8 +24,10 @@ export default function TradeForm({
   price,
   live = false,
   notice = "",
+  availableCash,
 }: {
   asset: Asset;
+  availableCash: number;
   disabled?: boolean;
   price?: number;
   live?: boolean;
@@ -89,11 +91,17 @@ export default function TradeForm({
       );
       return;
     }
+    if (amountCents > availableCash) {
+      setError(
+        `You have ${euro(availableCash)} in virtual cash. Choose a smaller amount or reset your demo in Settings.`,
+      );
+      return;
+    }
     setError("");
     setReviewing(true);
   };
   const confirm = () => {
-    if (disabled) return;
+    if (disabled || amountCents > availableCash) return;
     requestId.current ??= crypto.randomUUID();
     dispatch({
       type: "BUY",
@@ -121,7 +129,7 @@ export default function TradeForm({
         protection={protectionCents}
         autoExit={auto}
         price={price ?? ASSETS[asset].price}
-        disabled={disabled}
+        disabled={disabled || amountCents > availableCash}
         live={live}
         notice={notice.startsWith("Market quote changed.") ? notice : ""}
         onConfirm={confirm}

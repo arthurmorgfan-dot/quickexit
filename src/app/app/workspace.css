@@ -2279,3 +2279,31 @@
     height: 220px;
   }
 }
+
+/* Portfolio uses the existing overview cards in a compact responsive row. */
+.qw-portfolio-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 20px 0;
+}
+.qw-portfolio-stats .qw-stat {
+  min-width: 0;
+  padding: 18px;
+}
+.qw-portfolio-stats .qw-stat > strong {
+  font-size: clamp(20px, 2.2vw, 28px);
+  overflow-wrap: anywhere;
+}
+.qw-portfolio-stats .qw-stat > small {
+  display: block;
+  line-height: 1.6;
+}
+@media (max-width: 900px) {
+  .qw-portfolio-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .qw-portfolio-stats .qw-stat > strong {
+    float: none;
+    margin: 10px 0;
+  }
+}

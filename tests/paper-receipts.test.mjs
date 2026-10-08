@@ -147,7 +147,7 @@ test("automatic target, protection and manual closes each produce one fixed rece
     assert.ok(r.closedAt >= r.openedAt);
     assert.equal(r.netProfit, profit);
     assert.ok(Math.abs(r.netReturn - profit / 100) < 1e-12);
-    assert.equal(r.proceeds, s.cash);
+    assert.equal(r.proceeds + 990000, s.cash);
     assert.equal(r.grossProceeds - r.exitFee, r.proceeds);
     assert.equal(r.grossProfit - r.totalCosts, r.netProfit);
     assert.equal(
@@ -183,7 +183,7 @@ test("automatic target, protection and manual closes each produce one fixed rece
 test("new market quotes, next trades and transfers cannot alter historical receipts", () => {
   const s = close(),
     original = paperReceipt(10000, s.lastClosed.execution);
-  let later = reduce(s, { type: "TRANSFER" });
+  let later = s;
   later = reduce(
     later,
     buy({ requestId: "receipt-two", asset: "ETH", entryPrice: 2500 }),
@@ -200,6 +200,8 @@ test("new market quotes, next trades and transfers cannot alter historical recei
     paperReceipt(10000, later.lastClosed.execution).id,
     original.id,
   );
+  later = reduce(later, { type: "TRANSFER" });
+  assert.deepEqual(paperReceipt(10000, s.lastClosed.execution), original);
   assert.equal(paperReceipt(10000, openPaper(10000, 100, 1000, "open")), null);
 });
 
@@ -235,7 +237,7 @@ test("legacy v1/v2 history remains cost-free and does not fabricate receipts or 
     assert.equal(p.profit, 500);
     assert.equal(p.legacy, true);
     assert.equal(p.execution, undefined);
-    assert.equal(restored.state.cash, 10500);
+    assert.equal(restored.state.cash, 1000500);
     const html = renderToStaticMarkup(
       createElement(TradeReceipt, { position: p }),
     );
@@ -287,7 +289,7 @@ test("Live confirmation cannot override quotes; changed quote or mode requires r
   });
   assert.equal(s.getSnapshot().state.active.entryPrice, ASSETS.BTC.price);
   s.dispatch({ type: "MOVE", mode: "target" });
-  assert.equal(s.getSnapshot().state.cash, 21000);
+  assert.equal(s.getSnapshot().state.cash, 1001000);
 });
 
 test("confirmation/receipt consumer views disclose estimates versus realized paper values", () => {

@@ -58,15 +58,15 @@ test("requested refresh flow preserves the active trade, €105 proceeds, transf
   assert.equal(state.active, null);
   assert.equal(state.lastClosed.profit, 500);
   assert.equal(state.lastClosed.reason, "target");
-  assert.equal(state.cash, 10500);
+  assert.equal(state.cash, 1000500);
   assert.equal(state.completed.filter((p) => !p.example).length, 1);
   store.dispatch({ type: "TRANSFER" });
   store = refresh(storage);
   state = store.getSnapshot().state;
   assert.equal(state.cash, 0);
-  assert.equal(state.sent, 10500);
-  assert.equal(state.lastTransfer, 10500);
-  assert.match(state.events[0].text, /€105.00 sent to bank/);
+  assert.equal(state.sent, 1000500);
+  assert.equal(state.lastTransfer, 1000500);
+  assert.match(state.events[0].text, /€10,005.00 sent to bank/);
   store.reset(); // UI invokes only after explicit confirmation.
   assert.equal(storage.getItem(KEY), null);
   assert.equal(store.getSnapshot().asset, "BTC");
@@ -246,7 +246,7 @@ test("reset affects only the owned key and restores the clean demo", () => {
   assert.equal(storage.getItem(KEY), null);
   assert.equal(storage.getItem("unrelated-app"), "keep me");
   assert.equal(store.getSnapshot().state.active, null);
-  assert.equal(store.getSnapshot().state.cash, 0);
+  assert.equal(store.getSnapshot().state.cash, 1000000);
   assert.equal(store.getSnapshot().state.sent, 0);
   assert.equal(
     store.getSnapshot().state.completed.filter((p) => !p.example).length,
@@ -277,7 +277,7 @@ test("storage access, quota, and removal failures retain a usable demo without c
   assert.equal(quota.getSnapshot().state.active.amount, 10000);
   quota.reset();
   assert.equal(quota.getSnapshot().storageStatus, "unavailable");
-  assert.equal(quota.getSnapshot().state.cash, 0);
+  assert.equal(quota.getSnapshot().state.cash, 1000000);
 });
 
 test("other-tab restoration and reset synchronize without write loops or offline price changes", () => {

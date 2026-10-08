@@ -46,7 +46,7 @@ export default function Header() {
           <a className="signin" href="/signin">
             Sign in
           </a>
-          <Button href="/signup">Get Started</Button>
+          <Button href="/app">Try Demo</Button>
         </div>
         <button
           type="button"
@@ -76,10 +76,10 @@ export default function Header() {
         </a>
         <a
           className="mobile-start"
-          href="/signup"
+          href="/app"
           onClick={() => setOpen(false)}
         >
-          Get Started ↗
+          Try Demo ↗
         </a>
       </nav>
     </header>

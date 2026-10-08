@@ -273,7 +273,17 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
     if (
       !Number.isSafeInteger(proceeds) ||
       !Number.isSafeInteger(s.cash + s.sent) ||
-      proceeds !== s.cash + s.sent
+      (s.portfolioCapital === undefined
+        ? proceeds !== s.cash + s.sent
+        : !integer(s.portfolioCapital) ||
+          !Number.isSafeInteger(
+            s.portfolioCapital +
+              realCompleted.reduce((sum, p) => sum + p.profit, 0),
+          ) ||
+          !Number.isSafeInteger(s.cash + s.sent + (active?.amount ?? 0)) ||
+          s.portfolioCapital +
+            realCompleted.reduce((sum, p) => sum + p.profit, 0) !==
+            s.cash + s.sent + (active?.amount ?? 0))
     )
       return null;
     const lastClosedCandidate =
@@ -298,6 +308,9 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
         completed: [...realCompleted, ...examples],
         events: validEvents,
         cash: s.cash,
+        ...(s.portfolioCapital === undefined
+          ? {}
+          : { portfolioCapital: s.portfolioCapital as number }),
         sent: s.sent,
         lastClosed,
         lastTransfer: s.lastTransfer,
@@ -317,6 +330,7 @@ export function encodePaperTrading(snapshot: PaperTrading): string {
     active,
     completed,
     cash,
+    portfolioCapital,
     sent,
     lastClosed,
     lastTransfer,
@@ -334,6 +348,7 @@ export function encodePaperTrading(snapshot: PaperTrading): string {
       active,
       completed,
       cash,
+      ...(portfolioCapital === undefined ? {} : { portfolioCapital }),
       sent,
       lastClosed,
       lastTransfer,

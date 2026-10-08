@@ -21,6 +21,7 @@ import {
   euro,
   signedEuro,
   currentPrice,
+  portfolioSummary,
   type View,
 } from "@/lib/demo-trading";
 import { freshQuote } from "@/lib/market-data";
@@ -69,6 +70,7 @@ export default function Workspace() {
     ready,
     checkingAuth,
   } = workspace;
+  const portfolio = portfolioSummary(state);
   const [view, setView] = useState<View>("Trade"),
     [confirmReset, setConfirmReset] = useState(false);
   const saveLabel = checkingAuth
@@ -173,9 +175,7 @@ export default function Workspace() {
         : quote
           ? "Prices unavailable or stale. Last known values are held; live updates are paused. Switch to Demo to try an outcome."
           : "Prices unavailable. Demo reference price shown; live updates and new trades are paused. Switch to Demo to try an outcome.";
-  const realised = state.completed
-    .filter((p) => !p.example)
-    .reduce((sum, p) => sum + p.profit, 0);
+  const realised = portfolio.realized;
   return (
     <div
       className="qe-workspace"
@@ -307,12 +307,43 @@ export default function Workspace() {
             <FlaskConical size={15} />
             <p>
               You’re in the demo. All trades and transfers are simulated. No
-              real funds are used.
+              real funds are used. New demos start with €10,000 virtual EUR.
             </p>
           </div>
           <p className="qw-market-status" role="status">
             <strong>{marketLabel}</strong> · {marketMessage}
           </p>
+          {(view === "Trade" || view === "Home") && (
+            <section
+              className="qw-overview-stats qw-portfolio-stats"
+              aria-label="Simulated portfolio"
+            >
+              {[
+                ["Available virtual cash", euro(portfolio.cash)],
+                ["Invested", euro(portfolio.invested)],
+                ["Portfolio value", euro(portfolio.value)],
+                ["Net P&L", signedEuro(portfolio.netProfit)],
+              ].map(([label, value]) => (
+                <div className="qw-card qw-stat" key={label}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                  <small>
+                    {label === "Net P&L"
+                      ? `${signedEuro(portfolio.realized)} realized · ${signedEuro(portfolio.unrealized)} unrealized`
+                      : label === "Portfolio value"
+                        ? "Estimated after trading costs"
+                        : "Simulated EUR"}
+                  </small>
+                </div>
+              ))}
+            </section>
+          )}
+          {state.portfolioCapital === undefined && (
+            <p className="qw-market-status">
+              Your existing demo balance is preserved. Reset Demo in Settings
+              starts a fresh €10,000 portfolio.
+            </p>
+          )}
           <AccountPanel workspace={workspace} compact />
           {view === "Trade" && (
             <>
@@ -392,6 +423,7 @@ export default function Workspace() {
                     <TradeForm
                       key={`${account?.id ?? "guest"}-${asset}-${market.mode}`}
                       live={live}
+                      availableCash={state.cash}
                       notice={state.announcement}
                       asset={asset}
                       dispatch={dispatch}
@@ -418,63 +450,36 @@ export default function Workspace() {
           )}
           {view === "Home" && (
             <>
-              <div className="qw-overview-stats">
-                {[
-                  {
-                    label: "In your active trade",
-                    value: euro(state.active?.amount ?? 0),
-                    note: state.active
-                      ? `${state.active.asset} · one purposeful trade`
-                      : "No idle investment balance",
-                  },
-                  {
-                    label: "Current net profit",
-                    value: signedEuro(state.active?.profit ?? 0),
-                    note: state.active
-                      ? "Your active position"
-                      : "No open position",
-                  },
-                  {
-                    label: "Sent home",
-                    value: euro(state.sent),
-                    note: "Simulated proceeds, back home",
-                  },
-                ].map((item) => (
-                  <div className="qw-card qw-stat" key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <small>{item.note}</small>
-                  </div>
-                ))}
-              </div>
               <section className="qw-card qw-home-next">
                 <div>
                   <span className="qw-overline">YOUR NEXT MOVE</span>
                   <h2>
                     {state.active
                       ? "Your target is doing the work."
-                      : state.cash > 0
+                      : state.lastClosed && state.cash > 0
                         ? "Your trade is done. Send it home."
                         : "One trade. One clear exit."}
                   </h2>
                   <p>
                     {state.active
                       ? `${state.active.asset} position · ${signedEuro(state.active.profit)} profit · ${signedEuro(state.active.target)} target`
-                      : state.cash > 0
+                      : state.lastClosed && state.cash > 0
                         ? `${euro(state.cash)} of simulated cash is ready to leave the platform.`
-                        : "Choose an asset, an amount, and what you want to make."}
+                        : "Explore markets and put your virtual EUR to work. All trades are simulated."}
                   </p>
                 </div>
                 <ActionButton
                   onClick={() =>
                     navigate(
-                      state.cash > 0 && !state.active ? "Cash Out" : "Trade",
+                      state.lastClosed && state.cash > 0 && !state.active
+                        ? "Cash Out"
+                        : "Trade",
                     )
                   }
                 >
                   {state.active
                     ? "Monitor trade"
-                    : state.cash > 0
+                    : state.lastClosed && state.cash > 0
                       ? "Send to Bank"
                       : "Plan a trade"}
                 </ActionButton>
@@ -645,7 +650,8 @@ export default function Workspace() {
                             ? "this account’s paper workspace"
                             : "this device’s demo"}
                           ? Your saved trades, activity, and simulated balances
-                          will be cleared. This cannot be undone.
+                          will be cleared and virtual cash restored to €10,000.
+                          This cannot be undone.
                         </p>
                         <ActionButton
                           onClick={() => {
@@ -653,7 +659,7 @@ export default function Workspace() {
                             cancelReset();
                           }}
                         >
-                          Reset demo
+                          Reset Demo
                         </ActionButton>
                         <button
                           type="button"
@@ -678,7 +684,7 @@ export default function Workspace() {
                           );
                         }}
                       >
-                        <RotateCcw size={14} /> Reset demo
+                        <RotateCcw size={14} /> Reset Demo
                       </button>
                     )}
                   </div>
@@ -695,7 +701,7 @@ export default function Workspace() {
                   No real deposits. No bank details. All trades and transfers
                   are simulated. Accounts optionally sync paper state across
                   devices; Try Demo stays local. Live mode only reads public
-                  market prices. Reset demo clears the current paper workspace.
+                  market prices. Reset Demo clears the current paper workspace.
                 </p>
                 <p>
                   Targets and downside protection in a future live product would
