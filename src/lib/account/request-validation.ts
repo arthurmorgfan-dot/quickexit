@@ -32,8 +32,10 @@ export function parseCloudCommand(body: unknown): CloudCommand | null {
   }
 }
 /** Bound the stream before accumulating an untrusted body, even without Content-Length. */
-export async function readCloudBody(request: Request): Promise<unknown> {
-  const max = 2_100_000;
+export async function readCloudBody(
+  request: Request,
+  max = 2_100_000,
+): Promise<unknown> {
   if (Number(request.headers.get("content-length")) > max)
     throw Error("too_large");
   if (!request.body) throw Error("invalid_json");

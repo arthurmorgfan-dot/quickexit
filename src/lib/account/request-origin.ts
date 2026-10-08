@@ -14,5 +14,9 @@ export function requestOrigin(request: Request): string {
 }
 export function sameOriginWrite(request: Request): boolean {
   const origin = request.headers.get("origin");
-  return !!origin && origin === requestOrigin(request);
+  try {
+    return !!origin && origin === requestOrigin(request);
+  } catch {
+    return false;
+  }
 }

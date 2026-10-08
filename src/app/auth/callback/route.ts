@@ -1,20 +1,21 @@
+import { authCallbackDestination } from "@/lib/account/auth-flows";
 import { requestOrigin } from "@/lib/account/request-origin";
 import { serverSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 export async function GET(request: Request) {
-  const url = new URL(request.url),
-    code = url.searchParams.get("code");
+  let destination = "/signin?confirmation=failed";
   try {
-    const client = await serverSupabase();
-    if (client && code) {
-      const { error } = await client.auth.exchangeCodeForSession(code);
-      if (!error)
-        return NextResponse.redirect(new URL("/app", requestOrigin(request)));
-    }
+    destination = await authCallbackDestination(
+      await serverSupabase(),
+      new URL(request.url),
+    );
   } catch {
-    /* No credentials/tokens included in redirects or logs. */
+    /* No credentials in redirects/logs. */
   }
-  return NextResponse.redirect(
-    new URL("/signin?confirmation=failed", requestOrigin(request)),
+  const response = NextResponse.redirect(
+    new URL(destination, requestOrigin(request)),
   );
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  return response;
 }

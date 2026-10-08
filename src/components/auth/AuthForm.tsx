@@ -2,14 +2,15 @@
 import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authenticate } from "@/lib/account/auth-flows";
 import ConfirmationNotice from "./ConfirmationNotice";
 import Brand from "@/components/ui/Brand";
 import { browserSupabase } from "@/lib/supabase/browser";
-import { supabaseConfig } from "@/lib/supabase/config";
+import { supabaseSetup } from "@/lib/supabase/config";
 export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter();
   const signup = mode === "signup",
-    configured = !!supabaseConfig();
+    configured = supabaseSetup().status === "ready";
   const [pending, setPending] = useState(false),
     [message, setMessage] = useState(""),
     [success, setSuccess] = useState(false);
@@ -23,33 +24,20 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       email = String(form.get("email") ?? "").trim(),
       password = String(form.get("password") ?? "");
     try {
-      const client = browserSupabase();
-      if (!client)
-        throw Error("Accounts are not configured yet. You can still Try Demo.");
-      const result = signup
-        ? await client.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-          })
-        : await client.auth.signInWithPassword({ email, password });
-      if (result.error) {
-        setMessage(
-          signup
-            ? "Could not create the account. Check your details and try again; existing users can sign in."
-            : "Could not sign in. Check your email and password, or try again when connected.",
-        );
-        return;
-      }
-      if (result.data.session) {
+      const result = await authenticate(
+        browserSupabase(),
+        mode,
+        email,
+        password,
+        window.location.origin,
+      );
+      if (result.status === "signed_in") {
         router.replace("/app");
         router.refresh();
         return;
       }
-      setSuccess(true);
-      setMessage("Check your email to confirm your account, then sign in.");
+      setSuccess(result.status === "confirmation");
+      setMessage(result.message);
     } catch {
       setMessage(
         "Authentication is unavailable. Please try again, or continue with Try Demo.",
@@ -125,6 +113,11 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
             role={success ? "status" : "alert"}
           >
             {message}
+          </p>
+        )}
+        {!signup && (
+          <p>
+            <Link href="/forgot-password">Forgot password?</Link>
           </p>
         )}
         <p>

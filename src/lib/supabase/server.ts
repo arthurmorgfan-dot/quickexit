@@ -1,9 +1,9 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { supabaseConfig } from "./config";
+import { supabaseSetup } from "./config";
 export async function serverSupabase() {
-  const config = supabaseConfig();
+  const { config } = supabaseSetup();
   if (!config) return null;
   const jar = await cookies();
   return createServerClient(config.url, config.key, {

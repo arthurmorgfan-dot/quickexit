@@ -56,6 +56,18 @@ export function decodeCloudRecord(value: unknown, userId: string): CloudRecord {
     raw: encodePaperTrading(restored),
   };
 }
+export class CloudTransportError extends Error {
+  constructor(
+    public readonly kind: "auth" | "network",
+    public readonly status: number,
+  ) {
+    super(
+      kind === "auth"
+        ? "Your session ended. Sign in again; your device copy and pending changes are kept."
+        : "Cloud sync is unavailable. Your device copy is kept.",
+    );
+  }
+}
 export function browserCloudTransport(
   request: typeof fetch = fetch,
 ): CloudTransport {
@@ -69,10 +81,9 @@ export function browserCloudTransport(
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     if (!response.ok)
-      throw Error(
-        response.status === 401
-          ? "Sign in again to sync your saved paper trades."
-          : "Cloud sync is unavailable. Your device copy is kept.",
+      throw new CloudTransportError(
+        response.status === 401 ? "auth" : "network",
+        response.status,
       );
     return response.json();
   };

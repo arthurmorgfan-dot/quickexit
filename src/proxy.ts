@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { supabaseConfig } from "@/lib/supabase/config";
+import { supabaseSetup } from "@/lib/supabase/config";
 export async function proxy(request: NextRequest) {
-  const config = supabaseConfig();
+  const { config } = supabaseSetup();
   if (
     !config ||
     (request.nextUrl.pathname === "/app" &&
@@ -31,5 +31,14 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ["/app/:path*", "/signin", "/signup", "/auth/:path*", "/api/paper"],
+  matcher: [
+    "/app/:path*",
+    "/signin",
+    "/signup",
+    "/auth/:path*",
+    "/forgot-password",
+    "/reset-password",
+    "/api/paper",
+    "/api/auth/:path*",
+  ],
 };

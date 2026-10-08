@@ -531,3 +531,196 @@ test("stable UI actions from a previous account cannot mutate the new account", 
   assert.equal(s.getSnapshot().state.active, null);
   s.dispose();
 });
+
+test("expired authorization gates account mutations and preserves the exact pending command until reauthentication", async () => {
+  const { CloudTransportError } = loadTypeScript(
+    "src/lib/account/cloud-api.ts",
+  );
+  const f = setup();
+  f.records.set(A.id, {
+    userId: A.id,
+    revision: 1,
+    importDecided: true,
+    raw: clean(),
+  });
+  let expired = false;
+  const transport = {
+    ...f.transport,
+    commit: async (...args) => {
+      if (expired) throw new CloudTransportError("auth", 401);
+      return f.transport.commit(...args);
+    },
+  };
+  const s = createWorkspaceStore(() => f.storage, transport);
+  s.hydrate();
+  await s.setAccount(A);
+  expired = true;
+  s.dispatch(buy);
+  await settle();
+  assert.equal(s.getSnapshot().syncStatus, "reauth");
+  assert.equal(s.getSnapshot().ready, false);
+  const pending = JSON.parse(f.storage.getItem(accountKey(A.id))).inflight;
+  assert.ok(pending);
+  const before = s.getSnapshot().state;
+  s.dispatch({ type: "MOVE", mode: "target" });
+  assert.equal(s.getSnapshot().state, before);
+  await s.retry();
+  assert.equal(f.commits(), 0);
+  expired = false;
+  await s.setAccount(A);
+  assert.equal(s.getSnapshot().syncStatus, "saved");
+  assert.equal(s.getSnapshot().ready, true);
+  assert.equal(f.commits(), 1);
+  s.dispatch({ type: "MOVE", mode: "target" });
+  await settle();
+  const restored = f.fresh();
+  await restored.setAccount(A);
+  assert.equal(restored.getSnapshot().state.cash, 10500);
+  assert.equal(
+    restored.getSnapshot().state.completed.filter((p) => !p.example).length,
+    1,
+  );
+  assert.equal(f.row(A.id).revision, 3);
+  s.dispose();
+  restored.dispose();
+});
+
+test("expired session while restoring a cached account never unlocks it as an offline authorized session", async () => {
+  const { CloudTransportError } = loadTypeScript(
+    "src/lib/account/cloud-api.ts",
+  );
+  const f = setup();
+  const original = f.fresh();
+  await original.setAccount(A);
+  original.dispatch(buy);
+  await settle();
+  original.dispose();
+  const saved = f.storage.getItem(accountKey(A.id));
+  const s = createWorkspaceStore(() => f.storage, {
+    ...f.transport,
+    load: async () => {
+      throw new CloudTransportError("auth", 401);
+    },
+  });
+  s.hydrate();
+  await s.setAccount(A);
+  assert.equal(s.getSnapshot().syncStatus, "reauth");
+  assert.equal(s.getSnapshot().ready, false);
+  assert.equal(f.storage.getItem(accountKey(A.id)), saved);
+  await s.setAccount(null);
+  assert.equal(s.getSnapshot().account, null);
+  assert.equal(s.getSnapshot().state.active, null);
+  assert.equal(f.storage.getItem(accountKey(A.id)), saved);
+  s.dispose();
+});
+
+test("a durable operation journal is required before network writes; storage recovery retries without duplicated fills", async () => {
+  const f = setup(),
+    s = f.fresh();
+  await s.setAccount(A);
+  const count = f.commits(),
+    original = f.storage.setItem;
+  f.storage.setItem = () => {
+    throw Error("quota");
+  };
+  s.dispatch(buy);
+  await settle();
+  assert.equal(f.commits(), count);
+  assert.equal(s.getSnapshot().syncStatus, "offline");
+  assert.match(s.getSnapshot().syncMessage, /Cloud writes are paused/);
+  assert.equal(s.getSnapshot().state.active.amount, 10000);
+  f.storage.setItem = original;
+  await s.retry();
+  assert.equal(s.getSnapshot().syncStatus, "saved");
+  assert.equal(f.commits(), count + 1);
+  const restored = f.fresh();
+  await restored.setAccount(A);
+  assert.equal(restored.getSnapshot().state.active.amount, 10000);
+  assert.equal(
+    restored.getSnapshot().state.events.filter((e) => e.kind === "buy").length,
+    1,
+  );
+  s.dispose();
+  restored.dispose();
+});
+
+test("invalid account cache is preserved before restoration and is never replayed to the cloud", async () => {
+  const f = setup();
+  f.records.set(A.id, {
+    userId: A.id,
+    revision: 1,
+    importDecided: true,
+    raw: clean(),
+  });
+  const invalid = '{"version":99,"owner":"unrecognized","raw":"original-data"}';
+  f.storage.setItem(accountKey(A.id), invalid);
+  const s = f.fresh();
+  await s.setAccount(A);
+  assert.equal(f.storage.getItem(accountKey(A.id) + ".invalid"), invalid);
+  assert.equal(s.getSnapshot().recovered, true);
+  assert.equal(s.getSnapshot().state.active, null);
+  assert.equal(f.commits(), 0);
+  s.dispose();
+});
+
+test("conflict resolution never discards a device copy when recovery storage fails", async () => {
+  const f = setup();
+  f.records.set(A.id, {
+    userId: A.id,
+    revision: 1,
+    importDecided: true,
+    raw: clean(),
+  });
+  const one = f.fresh(),
+    two = f.fresh();
+  await one.setAccount(A);
+  await two.setAccount(A);
+  one.setAsset("ETH");
+  await settle();
+  two.setAsset("SOL");
+  await settle();
+  const original = f.storage.setItem;
+  f.storage.setItem = (key, value) => {
+    if (key.includes(".recovery")) throw Error("quota");
+    original(key, value);
+  };
+  const commits = f.commits();
+  await two.resolveConflict(false);
+  assert.equal(two.getSnapshot().syncStatus, "conflict");
+  assert.equal(two.getSnapshot().asset, "SOL");
+  assert.match(
+    two.getSnapshot().syncMessage,
+    /No conflict resolution was applied/,
+  );
+  assert.equal(f.commits(), commits);
+  f.storage.setItem = original;
+  await two.resolveConflict(false);
+  assert.equal(two.getSnapshot().asset, "ETH");
+  one.dispose();
+  two.dispose();
+});
+
+test("recovering an invalid account cache retains earlier recovery copies", async () => {
+  const f = setup();
+  f.records.set(A.id, {
+    userId: A.id,
+    revision: 1,
+    importDecided: true,
+    raw: clean(),
+  });
+  const key = accountKey(A.id),
+    earlier = "earlier-unrestored-data",
+    current = "new-unrestored-data";
+  f.storage.setItem(key + ".invalid", earlier);
+  f.storage.setItem(key, current);
+  const s = f.fresh();
+  await s.setAccount(A);
+  assert.equal(f.storage.getItem(key + ".invalid"), earlier);
+  assert.ok(
+    [...f.data.entries()].some(
+      ([k, v]) => k.startsWith(key + ".invalid.") && v === current,
+    ),
+  );
+  assert.equal(f.commits(), 0);
+  s.dispose();
+});

@@ -216,3 +216,105 @@ test("invalid requests fail atomically without inserting snapshots or receipts",
     await db.close();
   }
 });
+
+test("identical operation IDs are scoped per authenticated owner; altered duplicate payloads cannot change stored balances", async () => {
+  const { db, identity, commit } = await database();
+  try {
+    const id = crypto.randomUUID();
+    await identity(A);
+    const first = await commit(0, id);
+    const altered = { ...payload, state: { ...payload.state, cash: 999999 } };
+    const duplicate = await commit(0, id, "save", altered);
+    assert.equal(duplicate.status, "duplicate");
+    assert.deepEqual(duplicate.record.payload, first.record.payload);
+    await identity(B);
+    const own = await commit(0, id);
+    assert.equal(own.status, "saved");
+    assert.equal(own.record.user_id, B);
+    const receipts = (
+      await db.query(
+        "select user_id, operation_id from public.paper_operations",
+      )
+    ).rows;
+    assert.deepEqual(receipts, [{ user_id: B, operation_id: id }]);
+    await identity(A);
+    assert.equal(
+      (await db.query("select user_id from public.paper_operations")).rows[0]
+        .user_id,
+      A,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("RLS/grants deny anonymous JWT subjects and all direct INSERT/UPDATE/DELETE/TRUNCATE mutations", async () => {
+  const { db, identity, commit } = await database();
+  try {
+    await identity(A);
+    await commit(0);
+    for (const table of ["paper_workspaces", "paper_operations"]) {
+      for (const sql of [
+        `delete from public.${table}`,
+        `truncate public.${table}`,
+      ])
+        await assert.rejects(db.query(sql), /permission denied/);
+    }
+    await assert.rejects(
+      db.query("update public.paper_operations set revision=999"),
+      /permission denied/,
+    );
+    await assert.rejects(
+      db.query("insert into public.paper_operations values($1,$2,999,now())", [
+        A,
+        crypto.randomUUID(),
+      ]),
+      /permission denied/,
+    );
+    await identity(A, "anon");
+    await assert.rejects(commit(1), /permission denied/);
+    await assert.rejects(
+      db.query("select * from public.paper_operations"),
+      /permission denied/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("security-definer writes ignore caller search_path and nonexistent Auth owners fail atomically", async () => {
+  const { db, identity, commit } = await database();
+  try {
+    await identity(A);
+    await db.exec(
+      "set search_path = pg_temp; create temporary table paper_workspaces (user_id uuid, revision bigint); create temporary table paper_operations (user_id uuid, operation_id uuid, revision bigint);",
+    );
+    const saved = await commit(0);
+    assert.equal(saved.record.user_id, A);
+    assert.equal(saved.record.revision, 1);
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int as n from pg_temp.paper_workspaces",
+        )
+      ).rows[0].n,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int as n from pg_temp.paper_operations",
+        )
+      ).rows[0].n,
+      0,
+    );
+    await identity("33333333-3333-4333-8333-333333333333");
+    await assert.rejects(commit(0), /foreign key/);
+    assert.deepEqual(
+      (await db.query("select * from public.paper_workspaces")).rows,
+      [],
+    );
+  } finally {
+    await db.close();
+  }
+});

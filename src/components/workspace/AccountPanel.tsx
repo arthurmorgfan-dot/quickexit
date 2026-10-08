@@ -12,6 +12,7 @@ export default function AccountPanel({
   if (
     compact &&
     !w.authError &&
+    !w.recovered &&
     !w.checkingAuth &&
     (!active || ["saved", "demo", "syncing"].includes(w.syncStatus))
   )
@@ -36,6 +37,9 @@ export default function AccountPanel({
         </strong>
         <p role="status">
           {w.authError ||
+            (active && w.recovered
+              ? "This device’s account cache could not be restored. Its original data was preserved for recovery; the account copy is shown when available."
+              : "") ||
             w.syncMessage ||
             (active
               ? "Your account stores paper trades only."
@@ -64,6 +68,10 @@ export default function AccountPanel({
               only into an empty account.
             </p>
           </>
+        ) : w.syncStatus === "reauth" ? (
+          <Link className="qw-text-button" href="/signin">
+            Sign in to resume sync
+          </Link>
         ) : w.syncStatus === "conflict" ? (
           <>
             <button

@@ -2,6 +2,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createWorkspaceStore } from "@/lib/account/workspace-store";
 import { browserCloudTransport, accountKey } from "@/lib/account/cloud-api";
+import { observeAccountSession } from "@/lib/account/auth-session";
+import { signOutAccount } from "@/lib/account/auth-flows";
 import { browserSupabase } from "@/lib/supabase/browser";
 import { createCoinbaseProvider, watchMarket } from "@/lib/market-data";
 import { PAPER_TRADING_KEY } from "@/lib/paper-trading-storage";
@@ -16,53 +18,16 @@ export default function usePersistentDemo() {
     store.getServerSnapshot,
   );
   useEffect(() => {
-    let alive = true,
-      authEpoch = 0;
     const reduced = () =>
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     store.hydrate(reduced());
     const client = browserSupabase(),
       demo = new URLSearchParams(window.location.search).get("demo") === "1";
-    const apply = (session: { user: { id: string; email?: string } } | null) =>
-      store.setAccount(
-        session
-          ? {
-              id: session.user.id,
-              email: session.user.email ?? "Paper account",
-            }
-          : null,
-      );
-    let unsubscribe: (() => void) | undefined;
-    if (client && !demo) {
-      store.setAuthChecking(true);
-      const initialEpoch = authEpoch;
-      client.auth
-        .getSession()
-        .then(({ data, error }) => {
-          if (alive && authEpoch === initialEpoch) {
-            if (error)
-              setAuthError(
-                "Account session unavailable. Try Demo or sign in again.",
-              );
-            void apply(data.session);
-          }
-        })
-        .catch(() => {
-          if (alive) {
-            setAuthError(
-              "Account session unavailable. Try Demo or sign in again.",
-            );
-            store.setAuthChecking(false);
-          }
-        });
-      const { data } = client.auth.onAuthStateChange((_event, session) => {
-        authEpoch++;
-        queueMicrotask(() => {
-          if (alive) void apply(session);
-        });
-      });
-      unsubscribe = () => data.subscription.unsubscribe();
-    } else store.setAuthChecking(false);
+    const unsubscribe =
+      client && !demo
+        ? observeAccountSession(client, store, setAuthError)
+        : undefined;
+    if (!client || demo) store.setAuthChecking(false);
     const sync = (event: StorageEvent) => {
       const user = store.getSnapshot().account;
       if (
@@ -76,7 +41,6 @@ export default function usePersistentDemo() {
     window.addEventListener("storage", sync);
     window.addEventListener("online", retry);
     return () => {
-      alive = false;
       unsubscribe?.();
       window.clearInterval(interval);
       window.removeEventListener("storage", sync);
@@ -124,15 +88,9 @@ export default function usePersistentDemo() {
     },
     signOut: async () => {
       setAuthError("");
-      try {
-        const client = browserSupabase();
-        if (!client) return;
-        const { error } = await client.auth.signOut({ scope: "local" });
-        if (error) throw error;
-        await store.setAccount(null);
-      } catch {
-        setAuthError("Could not sign out. Please retry when connected.");
-      }
+      const result = await signOutAccount(browserSupabase());
+      if (result.signedOut) await store.setAccount(null);
+      setAuthError(result.message);
     },
     resetDemo: () =>
       belongs() &&

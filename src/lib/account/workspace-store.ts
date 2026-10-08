@@ -12,13 +12,21 @@ import { initialDemo } from "../demo-trading";
 import { initialMarket } from "../market-data";
 import {
   accountKey,
+  CloudTransportError,
   decodeCloudRecord,
   type AccountIdentity,
   type CloudTransport,
   type CloudCommand,
 } from "./cloud-api";
 export type SyncStatus =
-  "demo" | "loading" | "syncing" | "saved" | "offline" | "conflict" | "import";
+  | "demo"
+  | "loading"
+  | "syncing"
+  | "saved"
+  | "offline"
+  | "conflict"
+  | "import"
+  | "reauth";
 export type WorkspaceSnapshot = DeviceSnapshot & {
   account: AccountIdentity | null;
   syncStatus: SyncStatus;
@@ -102,6 +110,7 @@ export function createWorkspaceStore(
     installing = false,
     ready = false,
     checkingAuth = false;
+  let cacheRecovered = false;
   let status: SyncStatus = "demo",
     message = "",
     importAvailable = false,
@@ -123,6 +132,7 @@ export function createWorkspaceStore(
   const emit = () => {
     snapshot = {
       ...inner.getSnapshot(),
+      recovered: inner.getSnapshot().recovered || cacheRecovered,
       account,
       syncStatus: status,
       ready: ready && !checkingAuth,
@@ -132,16 +142,27 @@ export function createWorkspaceStore(
     };
     listeners.forEach((l) => l());
   };
+  const preserveCopy = (key: string, raw: string) => {
+    const storage = getStorage();
+    const previous = storage.getItem(key);
+    if (previous === raw) return;
+    storage.setItem(previous ? `${key}.${uuid()}` : key, raw);
+  };
+  let preserveInvalidCache = false;
   const persist = () => {
+    if (preserveInvalidCache)
+      throw Error("Original device copy could not be preserved");
     if (journal)
       getStorage().setItem(accountKey(journal.owner), JSON.stringify(journal));
   };
   const persistSafe = () => {
     try {
       persist();
+      return true;
     } catch {
       message =
-        "Device storage is unavailable. Keep this page open until cloud sync succeeds.";
+        "Device storage is unavailable. Cloud writes are paused to protect retry history. Keep this page open and retry when storage is available.";
+      return false;
     }
   };
   const install = (raw: string) => {
@@ -173,6 +194,7 @@ export function createWorkspaceStore(
       !ready ||
       running ||
       status === "conflict" ||
+      status === "reauth" ||
       (!journal.queued && !journal.inflight)
     )
       return;
@@ -195,7 +217,11 @@ export function createWorkspaceStore(
             raw: cloudRaw(journal.raw!),
           };
           journal.queued = false;
-          persistSafe();
+        }
+        if (!persistSafe()) {
+          status = "offline";
+          emit();
+          return;
         }
         const sent: CloudCommand = journal.inflight;
         const timer = timeoutController();
@@ -229,8 +255,15 @@ export function createWorkspaceStore(
       status = "saved";
       message = "Paper trading saved to your account.";
       emit();
-    } catch {
+    } catch (error) {
       if (epoch === generation) {
+        if (error instanceof CloudTransportError && error.kind === "auth") {
+          ready = false;
+          status = "reauth";
+          message = error.message;
+          emit();
+          return;
+        }
         status = "offline";
         message =
           "Cloud sync is unavailable. Your device copy and pending changes are kept; retry when connected.";
@@ -356,8 +389,15 @@ export function createWorkspaceStore(
         // No existing local state means there is nothing to ask the user to import.
         if (!importRaw) await chooseImport(false);
       }
-    } catch {
+    } catch (error) {
       if (epoch === generation) {
+        if (error instanceof CloudTransportError && error.kind === "auth") {
+          ready = false;
+          status = "reauth";
+          message = error.message;
+          emit();
+          return;
+        }
         ready = known;
         status = "offline";
         message = known
@@ -378,6 +418,10 @@ export function createWorkspaceStore(
     if (account?.id === next?.id) {
       if (next) account = next;
       emit();
+      if (next && status === "reauth") {
+        status = "loading";
+        await reconcile();
+      }
       return;
     }
     generation++;
@@ -385,12 +429,14 @@ export function createWorkspaceStore(
     running = false;
     unsubscribe();
     account = next;
+    cacheRecovered = false;
     ready = false;
     message = "";
     importAvailable = false;
     importRaw = null;
     if (!next) {
       journal = null;
+      preserveInvalidCache = false;
       status = "demo";
       inner = createPaperTradingStore(getStorage);
       unsubscribe = inner.subscribe(emit);
@@ -403,6 +449,20 @@ export function createWorkspaceStore(
     try {
       restored = restoreJournal(getStorage(), next.id);
     } catch {}
+    preserveInvalidCache = false;
+    if (!restored) {
+      try {
+        const original = getStorage().getItem(accountKey(next.id));
+        if (original) {
+          cacheRecovered = true;
+          preserveCopy(`${accountKey(next.id)}.invalid`, original);
+          message =
+            "This device’s account cache could not be restored. Its original data is kept in a recovery copy; cloud restoration will not replay it.";
+        }
+      } catch {
+        preserveInvalidCache = true;
+      }
+    }
     journal = restored ?? {
       version: 1,
       owner: next.id,
@@ -431,8 +491,14 @@ export function createWorkspaceStore(
       if (epoch !== generation || !journal) return;
       // Preserve the losing device copy for recovery without allowing an automatic replay.
       try {
-        getStorage().setItem(`${accountKey(userId)}.recovery`, journal.raw!);
-      } catch {}
+        preserveCopy(`${accountKey(userId)}.recovery`, journal.raw!);
+      } catch {
+        status = "conflict";
+        message =
+          "Could not preserve your device copy. No conflict resolution was applied; restore device storage and retry.";
+        emit();
+        return;
+      }
       journal.revision = remote.revision;
       journal.inflight = null;
       journal.queued = useDevice;
@@ -544,7 +610,7 @@ export function createWorkspaceStore(
       void reconcile();
     },
     retry: async () => {
-      if (status === "conflict") return;
+      if (status === "conflict" || status === "reauth") return;
       if (journal?.inflight || journal?.queued) await flush();
       else await reconcile();
     },
