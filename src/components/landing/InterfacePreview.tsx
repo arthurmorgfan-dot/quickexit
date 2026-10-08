@@ -1,12 +1,6 @@
 "use client";
 import { useState } from "react";
-import {
-  ArrowUpRight,
-  Check,
-  ChevronDown,
-  ShieldCheck,
-  Zap,
-} from "lucide-react";
+import { ArrowUpRight, Check, ShieldCheck, Zap } from "lucide-react";
 import { Bitcoin } from "./Hero";
 export default function InterfacePreview() {
   const [amount, setAmount] = useState(100),
@@ -71,7 +65,6 @@ export default function InterfacePreview() {
               </span>
             </div>
           </div>
-          <ChevronDown size={17} aria-hidden="true" />
         </div>
         <fieldset>
           <legend>
@@ -128,6 +121,7 @@ export default function InterfacePreview() {
                 key={v}
                 type="button"
                 aria-pressed={protection === v}
+                aria-label={`${v} downside protection${protection === v ? ", select again to disable" : ""}`}
                 className={protection === v ? "selected" : ""}
                 onClick={() => {
                   setProtection(protection === v ? "" : v);
@@ -156,7 +150,9 @@ export default function InterfacePreview() {
               setMessage("");
             }}
           >
-            <span />
+            <span className="toggle-track" aria-hidden="true">
+              <span />
+            </span>
           </button>
         </div>
         <div className="preview-profit">
@@ -179,6 +175,7 @@ export default function InterfacePreview() {
             aria-valuenow={progress}
             aria-valuemin={0}
             aria-valuemax={100}
+            aria-valuetext={`${progress}% of the illustrative ${euro(targetValue)} profit target`}
           >
             <span style={{ width: `${progress}%` }} />
           </div>
@@ -198,11 +195,13 @@ export default function InterfacePreview() {
         <p className="preview-disclaimer">
           Product concept. No real trades or funds.
         </p>
-        {message && (
-          <p role="status" className="preview-message">
-            {message}
-          </p>
-        )}
+        <p
+          role="status"
+          aria-atomic="true"
+          className={message ? "preview-message" : "sr-only"}
+        >
+          {message}
+        </p>
       </div>
     </section>
   );

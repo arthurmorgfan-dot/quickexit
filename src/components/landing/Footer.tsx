@@ -1,16 +1,5 @@
-"use client";
-import { useEffect } from "react";
 import Brand from "../ui/Brand";
 export default function Footer() {
-  useEffect(() => {
-    const openLinkedNotice = () => {
-      const notice = document.getElementById(window.location.hash.slice(1));
-      if (notice instanceof HTMLDetailsElement) notice.open = true;
-    };
-    openLinkedNotice();
-    window.addEventListener("hashchange", openLinkedNotice);
-    return () => window.removeEventListener("hashchange", openLinkedNotice);
-  }, []);
   return (
     <footer className="footer container">
       <div className="footer-top">

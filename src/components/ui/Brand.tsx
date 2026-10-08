@@ -1,9 +1,9 @@
 import { ArrowUpRight } from "lucide-react";
-export default function Brand() {
+export default function Brand({ href = "#top" }: { href?: string }) {
   return (
-    <a href="#top" className="brand" aria-label="QuickExit home">
+    <a href={href} className="brand" aria-label="QuickExit home">
       <span className="brand-symbol">
-        <ArrowUpRight size={24} strokeWidth={2.7} />
+        <ArrowUpRight aria-hidden="true" size={24} strokeWidth={2.7} />
       </span>
       QuickExit<span className="brand-period">.</span>
     </a>

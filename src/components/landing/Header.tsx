@@ -23,8 +23,16 @@ export default function Header() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [open]);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 681px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   return (
-    <header className="header">
+    <header id="top" className="header" tabIndex={-1}>
       <div className="container header-inner">
         <Brand />
         <nav className="desktop-nav" aria-label="Main navigation">
@@ -41,6 +49,7 @@ export default function Header() {
           <Button>Get Started</Button>
         </div>
         <button
+          type="button"
           className="menu-button"
           ref={menuButton}
           aria-label={open ? "Close navigation" : "Open navigation"}
@@ -51,29 +60,28 @@ export default function Header() {
           {open ? <X /> : <Menu />}
         </button>
       </div>
-      {open && (
-        <nav
-          id="mobile-nav"
-          className="mobile-nav container"
-          aria-label="Mobile navigation"
+      <nav
+        id="mobile-nav"
+        hidden={!open}
+        className="mobile-nav container"
+        aria-label="Mobile navigation"
+      >
+        {links.map(([label, id]) => (
+          <a key={id} href={`#${id}`} onClick={() => setOpen(false)}>
+            {label}
+          </a>
+        ))}
+        <a href="#availability" onClick={() => setOpen(false)}>
+          Sign in availability
+        </a>
+        <a
+          className="mobile-start"
+          href="#product"
+          onClick={() => setOpen(false)}
         >
-          {links.map(([label, id]) => (
-            <a key={id} href={`#${id}`} onClick={() => setOpen(false)}>
-              {label}
-            </a>
-          ))}
-          <a href="#availability" onClick={() => setOpen(false)}>
-            Sign in availability
-          </a>
-          <a
-            className="mobile-start"
-            href="#product"
-            onClick={() => setOpen(false)}
-          >
-            Get Started ↗
-          </a>
-        </nav>
-      )}
+          Get Started ↗
+        </a>
+      </nav>
     </header>
   );
 }
