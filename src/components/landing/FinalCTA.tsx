@@ -10,7 +10,7 @@ export default function FinalCTA() {
         <br />
         to feel complicated.
       </h2>
-      <Button>Get Started</Button>
+      <Button href="/app">Get Started</Button>
       <p>Start with the preview. See a simpler way to trade.</p>
     </section>
   );

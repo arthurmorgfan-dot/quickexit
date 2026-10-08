@@ -46,7 +46,7 @@ export default function Header() {
           <a className="signin" href="#availability">
             Sign in <span className="sr-only">availability information</span>
           </a>
-          <Button>Get Started</Button>
+          <Button href="/app">Get Started</Button>
         </div>
         <button
           type="button"
@@ -74,11 +74,7 @@ export default function Header() {
         <a href="#availability" onClick={() => setOpen(false)}>
           Sign in availability
         </a>
-        <a
-          className="mobile-start"
-          href="#product"
-          onClick={() => setOpen(false)}
-        >
+        <a className="mobile-start" href="/app" onClick={() => setOpen(false)}>
           Get Started ↗
         </a>
       </nav>

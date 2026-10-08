@@ -69,7 +69,7 @@ export default function Hero() {
           position back into money you can send home.
         </p>
         <div className="hero-actions">
-          <Button>Start Trading</Button>
+          <Button href="/app">Start Trading</Button>
           <Button href="#how-it-works" secondary>
             See how it works
           </Button>
