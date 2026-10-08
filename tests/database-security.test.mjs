@@ -318,3 +318,72 @@ test("security-definer writes ignore caller search_path and nonexistent Auth own
     await db.close();
   }
 });
+
+test("development SQL Editor bundle contains the unchanged migration, applies atomically and passes security assertions", async () => {
+  const bundle = fs.readFileSync(
+    new URL("../docs/supabase/development-apply.sql", import.meta.url),
+    "utf8",
+  );
+  const original = fs.readFileSync(
+    new URL(
+      "../supabase/migrations/202610080001_paper_accounts.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.equal(
+    bundle
+      .split("-- BEGIN UNCHANGED REVIEWED MIGRATION\n")[1]
+      .split("\n-- END UNCHANGED REVIEWED MIGRATION")[0],
+    original,
+  );
+  const db = new PGlite();
+  try {
+    await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+    grant usage on schema auth to authenticated,anon;`);
+    await db.exec(bundle);
+    assert.equal(
+      (await db.query("select count(*)::int as n from public.paper_workspaces"))
+        .rows[0].n,
+      0,
+    );
+    await assert.rejects(db.exec(bundle), /Existing QuickExit objects/);
+    await db.exec("rollback");
+    assert.equal(
+      (await db.query("select count(*)::int as n from public.paper_operations"))
+        .rows[0].n,
+      0,
+    );
+    await db.exec(
+      fs.readFileSync(
+        new URL("../docs/supabase/development-preflight.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("development security assertions fail closed on unexpected grants or missing forced RLS", async () => {
+  const { db } = await database();
+  const checks = fs.readFileSync(
+    new URL(
+      "../docs/supabase/development-security-checks.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  try {
+    await db.exec(checks);
+    await db.exec("grant insert on public.paper_workspaces to authenticated");
+    await assert.rejects(db.exec(checks), /Forbidden direct INSERT/);
+    await db.exec(
+      "revoke insert on public.paper_workspaces from authenticated; alter table public.paper_operations no force row level security",
+    );
+    await assert.rejects(db.exec(checks), /RLS missing or not forced/);
+  } finally {
+    await db.close();
+  }
+});

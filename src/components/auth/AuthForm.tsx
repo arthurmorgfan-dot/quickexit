@@ -63,7 +63,7 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         </Suspense>
         {!configured && (
           <p className="qe-auth-message" role="status">
-            Accounts are not configured on this deployment yet. Try Demo remains
+            Accounts are not enabled on this deployment yet. Try Demo remains
             available.
           </p>
         )}

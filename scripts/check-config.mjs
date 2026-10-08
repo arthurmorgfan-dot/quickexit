@@ -19,7 +19,9 @@ try {
   const config = supabaseConfig();
   console.log(
     config
-      ? "Public Supabase configuration validated (no network verification performed)."
+      ? process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED === "true"
+        ? "Public Supabase configuration validated; accounts enabled (hosted verification not performed)."
+        : "Public Supabase configuration validated; accounts gated off, Try Demo available."
       : "Supabase is unconfigured. Accounts disabled; Try Demo available.",
   );
 } catch (error) {

@@ -56,6 +56,8 @@ export function supabaseConfig() {
 export function supabaseSetup() {
   try {
     const config = supabaseConfig();
+    if (config && process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED !== "true")
+      return { status: "disabled", config: null } as const;
     return { status: config ? "ready" : "missing", config } as const;
   } catch {
     return { status: "invalid", config: null } as const;

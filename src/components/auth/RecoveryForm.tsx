@@ -103,7 +103,7 @@ export default function RecoveryForm({ mode }: { mode: "request" | "change" }) {
         </p>
         {!configured && (
           <p className="qe-auth-message" role="status">
-            Accounts are not configured yet. Try Demo remains available.
+            Accounts are not enabled yet. Try Demo remains available.
           </p>
         )}
         {change && configured && (

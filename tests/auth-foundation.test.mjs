@@ -648,3 +648,30 @@ test("browser transport classifies authorization failures without exposing serve
     );
   }
 });
+
+test("hosted accounts fail closed until explicitly enabled despite valid public configuration", () => {
+  const names = [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED",
+  ];
+  const previous = names.map((n) => process.env[n]);
+  try {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://dev.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_test_only";
+    for (const value of [undefined, "false", "TRUE", "1"]) {
+      if (value === undefined)
+        delete process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED;
+      else process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED = value;
+      assert.deepEqual(supabaseSetup(), { status: "disabled", config: null });
+    }
+    process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED = "true";
+    assert.equal(supabaseSetup().status, "ready");
+  } finally {
+    names.forEach((name, i) => {
+      if (previous[i] === undefined) delete process.env[name];
+      else process.env[name] = previous[i];
+    });
+  }
+});
