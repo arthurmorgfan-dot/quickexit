@@ -1,6 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MobileDisclosure from "./MobileDisclosure";
 import { ASSETS, priceEuro, type Asset } from "@/lib/demo-trading";
+import type { MarketQuote, MarketStatus } from "@/lib/market-data";
+import {
+  TIMEFRAMES,
+  dataStatus,
+  type Timeframe,
+  type ChartType,
+} from "@/lib/market/models";
+import useMarketIntelligence from "./useMarketIntelligence";
+import PriceChart from "./PriceChart";
 export function AssetMark({ asset }: { asset: Asset }) {
   return (
     <span
@@ -11,26 +20,47 @@ export function AssetMark({ asset }: { asset: Asset }) {
     </span>
   );
 }
-const paths = {
-  "1H": "M0 147 L20 142 L40 153 L60 124 L80 134 L100 123 L120 139 L140 114 L160 123 L180 92 L200 107 L220 94 L240 114 L260 87 L280 95 L300 70 L320 86 L340 61 L360 71 L380 81 L400 56 L420 63 L440 43 L460 55 L480 39 L500 51 L520 32 L540 43 L560 29 L580 38 L600 21",
-  "1D": "M0 163 L30 170 L60 135 L90 148 L120 122 L150 144 L180 102 L210 117 L240 93 L270 108 L300 80 L330 97 L360 63 L390 72 L420 48 L450 70 L480 47 L510 61 L540 25 L570 36 L600 21",
-  "1W": "M0 151 L30 127 L60 141 L90 123 L120 147 L150 139 L180 114 L210 135 L240 93 L270 114 L300 88 L330 102 L360 74 L390 99 L420 63 L450 80 L480 48 L510 63 L540 37 L570 48 L600 21",
-  "1M": "M0 165 L30 143 L60 155 L90 139 L120 162 L150 137 L180 146 L210 99 L240 116 L270 127 L300 92 L330 110 L360 71 L390 87 L420 55 L450 79 L480 41 L510 53 L540 29 L570 41 L600 21",
-} as const;
 export default function MarketCard({
   asset,
   setAsset,
   locked,
   price,
   live = false,
+  quote,
+  connection,
 }: {
   asset: Asset;
   setAsset: (asset: Asset) => void;
   locked: boolean;
   price: number;
   live?: boolean;
+  quote?: MarketQuote;
+  connection?: MarketStatus;
 }) {
-  const [timeframe, setTimeframe] = useState<keyof typeof paths>("1D");
+  const [timeframe, setTimeframe] = useState<Timeframe>("1D"),
+    [type, setType] = useState<ChartType>("line"),
+    [now, setNow] = useState(0);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const first = setTimeout(update, 0);
+    const timer = setInterval(update, 15000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, []);
+  const data = useMarketIntelligence(asset, timeframe, live);
+  const status = live
+    ? now
+      ? dataStatus(quote, connection === "unavailable", now)
+      : "Connecting"
+    : "Demo";
+  const stats = data.stats?.data,
+    history = data.history?.data;
+  const statsStale =
+    data.stats?.stale ||
+    data.error ||
+    (!!data.stats && now - data.stats.fetchedAt > 120000);
   return (
     <section className="qw-card qw-market" aria-label="Asset market overview">
       <div className="qw-card-heading">
@@ -38,7 +68,8 @@ export default function MarketCard({
           YOUR ASSET
         </label>
         <span className="qw-badge">
-          <span className="status-dot" /> {live ? "LIVE PRICES" : "DEMO PRICES"}
+          <span className="status-dot" />
+          {status.toUpperCase()} PRICES
         </span>
       </div>
       <div className="qw-market-top">
@@ -63,32 +94,56 @@ export default function MarketCard({
             </select>
           </div>
         </div>
-        {!live && (
+        {stats && live ? (
           <span
-            className={`qw-market-change ${ASSETS[asset].change < 0 ? "qw-negative" : ""}`}
+            className={`qw-market-change ${stats.change < 0 ? "qw-negative" : ""}`}
           >
-            {ASSETS[asset].change > 0 ? "+" : ""}
-            {ASSETS[asset].change}% <small>illustrative 24h</small>
+            {stats.change >= 0 ? "+" : ""}
+            {stats.change.toFixed(2)}%
+            <small>24h {statsStale ? "· last known" : ""}</small>
           </span>
-        )}
+        ) : !live ? (
+          <span className="qw-market-change">
+            Demo<small>simulated outcomes</small>
+          </span>
+        ) : null}
       </div>
       <div className="qw-price">{priceEuro(price)}</div>
+      <p className="qw-micro" role="status">
+        {live
+          ? quote
+            ? `${status} · Coinbase Exchange · indicative last trade`
+            : "Awaiting verified quote · Demo reference price shown"
+          : "Demo price · all trading remains simulated"}
+      </p>
       <MobileDisclosure
         label="Price chart"
-        hint="Illustrative market · not live data"
+        hint={
+          live ? "Observed market history" : "Switch to Live for market history"
+        }
         className="qw-chart-disclosure"
       >
         <div className="qw-chart-toolbar">
-          <span>
-            Price overview <span>· Mock data</span>
-          </span>
-          <div aria-label="Chart timeframe">
-            {(Object.keys(paths) as (keyof typeof paths)[]).map((t) => (
+          <div role="group" aria-label="Chart type">
+            {(["line", "candles"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
-                aria-pressed={t === timeframe}
-                className={t === timeframe ? "is-selected" : ""}
+                aria-pressed={type === t}
+                className={type === t ? "is-selected" : ""}
+                onClick={() => setType(t)}
+              >
+                {t === "line" ? "Line" : "Candles"}
+              </button>
+            ))}
+          </div>
+          <div role="group" aria-label="Chart timeframe">
+            {TIMEFRAMES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={timeframe === t}
+                className={timeframe === t ? "is-selected" : ""}
                 onClick={() => setTimeframe(t)}
               >
                 {t}
@@ -96,47 +151,73 @@ export default function MarketCard({
             ))}
           </div>
         </div>
-        <svg
-          viewBox="0 0 600 210"
-          className="qw-chart"
-          role="img"
-          aria-label={`${ASSETS[asset].name} illustrative ${timeframe} price chart. Not live market data.`}
-        >
-          <defs>
-            <linearGradient id="qw-chart-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#96edb9" stopOpacity=".14" />
-              <stop offset="100%" stopColor="#96edb9" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M0 40H600 M0 95H600 M0 150H600 M0 205H600"
-            stroke="#ffffff"
-            strokeOpacity=".055"
-          />
-          <path d={`${paths[timeframe]} V210 H0Z`} fill="url(#qw-chart-fill)" />
-          <path
-            d={paths[timeframe]}
-            fill="none"
-            stroke="#96edb9"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-          <circle cx="600" cy="21" r="4" fill="#96edb9" />
-        </svg>
-        <div className="qw-chart-axis">
-          <span>
-            {timeframe === "1H"
-              ? "1 hour"
-              : timeframe === "1D"
-                ? "24 hours"
-                : timeframe === "1W"
-                  ? "7 days"
-                  : "30 days"}{" "}
-            ago
-          </span>
-          <span>Demo now</span>
-        </div>
+        {!live ? (
+          <div className="qw-history-empty">
+            Market charts use real observations.
+            <small>
+              Choose Live in Settings to explore history. Demo controls remain
+              deterministic.
+            </small>
+          </div>
+        ) : history?.candles.length ? (
+          <>
+            <PriceChart candles={history.candles} type={type} />
+            <p className="qw-micro" role="status">
+              {data.history?.stale || data.error
+                ? "Last known history · refresh unavailable"
+                : data.loading
+                  ? "Refreshing history…"
+                  : "Observed OHLCV"}{" "}
+              · {history.granularity / 60}-minute candles
+              {history.gaps > 0 ? ` · ${history.gaps} missing intervals` : ""}.
+              Empty intervals are not filled.
+            </p>
+          </>
+        ) : (
+          <div className="qw-history-empty" role="status">
+            {data.loading
+              ? "Loading market history…"
+              : "History unavailable for this range."}
+            <small>No substitute prices are generated.</small>
+          </div>
+        )}
       </MobileDisclosure>
+      <dl className="qw-market-statistics">
+        <div>
+          <dt>24h volume</dt>
+          <dd>
+            {live && stats
+              ? `${new Intl.NumberFormat("en", { maximumFractionDigits: 2, notation: "compact" }).format(stats.volume)} ${asset}`
+              : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt>24h high</dt>
+          <dd>{live && stats ? priceEuro(stats.high) : "—"}</dd>
+        </div>
+        <div>
+          <dt>24h low</dt>
+          <dd>{live && stats ? priceEuro(stats.low) : "—"}</dd>
+        </div>
+        <div>
+          <dt>Last quote</dt>
+          <dd>
+            {live && quote
+              ? new Date(quote.updatedAt).toLocaleTimeString()
+              : "Demo"}
+          </dd>
+        </div>
+      </dl>
+      {live && (
+        <p className="qw-micro">
+          {stats
+            ? `Statistics ${statsStale ? "stale · " : ""}received ${new Date(data.stats!.fetchedAt).toLocaleTimeString()}. Volume is ${asset} traded on Coinbase, not global volume.`
+            : data.loading
+              ? "Loading market statistics…"
+              : "Market statistics unavailable."}{" "}
+          Prices do not guarantee a simulated fill.
+        </p>
+      )}
       <div className="qw-market-foot">
         <span>
           Less chart-watching.

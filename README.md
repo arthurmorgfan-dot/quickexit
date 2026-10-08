@@ -179,3 +179,9 @@ No paper schema migration or accounting changes are needed: paper schema v3 and 
 ### Account activation gate
 
 `NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED` defaults to disabled. Supabase URL/key configuration alone never enables accounts. Both browser/server clients and the session proxy stay inactive until the flag is exactly `true`; authentication pages still render and Try Demo works. Do not enable this flag for hosted environments until database requirements, RLS and account isolation are verified and activation is approved. Changes require a rebuild. Existing local paper data is preserved. The public URL/key preflight still validates configuration without contacting Supabase.
+
+## v0.5: Market Intelligence
+
+The paper workspace now uses a server-side read-only Coinbase Exchange adapter for Live EUR quotes, 24h venue statistics and historical OHLCV. Choose Settings → Market data → Live, then Trade to explore line/candlestick charts at 1H/4H/1D/1W/1M/1Y. Mobile preserves the chart disclosure. Quotes are indicative observed prices; entries/exits, costs and funds remain simulated. Demo keeps deterministic controls and explicitly does not invent market history.
+
+[The v0.5 checkpoint](docs/releases/v0.5.md) documents provider limits/costs, caching/retries, attribution, verification, optional browser tests and remaining risks. Paper schema v3 and account journal v1 remain unchanged; no migration is included. Hosted accounts stay disabled.

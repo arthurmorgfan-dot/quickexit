@@ -330,6 +330,8 @@ export default function Workspace() {
                         setAsset={setAsset}
                         locked={!!state.active}
                         live={live}
+                        quote={quote}
+                        connection={marketStatus}
                         price={
                           live && quote
                             ? quote.price

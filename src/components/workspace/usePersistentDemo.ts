@@ -5,7 +5,8 @@ import { browserCloudTransport, accountKey } from "@/lib/account/cloud-api";
 import { observeAccountSession } from "@/lib/account/auth-session";
 import { signOutAccount } from "@/lib/account/auth-flows";
 import { browserSupabase } from "@/lib/supabase/browser";
-import { createCoinbaseProvider, watchMarket } from "@/lib/market-data";
+import { watchMarket } from "@/lib/market-data";
+import { createServerQuoteProvider } from "@/lib/market/client";
 import { PAPER_TRADING_KEY } from "@/lib/paper-trading-storage";
 export default function usePersistentDemo() {
   const [store] = useState(() =>
@@ -55,7 +56,7 @@ export default function usePersistentDemo() {
     )
       return;
     return watchMarket(
-      createCoinbaseProvider(),
+      createServerQuoteProvider(),
       store.receiveMarketQuotes,
       store.setMarketStatus,
     );
