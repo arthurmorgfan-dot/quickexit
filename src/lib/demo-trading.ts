@@ -1,3 +1,12 @@
+import {
+  openPaper,
+  valuePaper,
+  priceForNetProfit,
+  validCosts,
+  validPrice,
+  type PaperExecution,
+  type ExecutionCosts,
+} from "./paper-execution";
 /** Client-only simulation. Integer cents keep mock balances and cash-out consistent. */
 export const ASSETS = {
   BTC: { name: "Bitcoin", price: 63421.2, change: 1.24, symbol: "₿" },
@@ -22,6 +31,8 @@ export type Position = {
   example?: boolean;
   /** Observed market price at a paper exit; never an execution price. */
   exitPrice?: number;
+  execution?: PaperExecution;
+  legacy?: boolean;
 };
 export type ActivityEvent = {
   id: number;
@@ -49,7 +60,7 @@ export const signedEuro = (cents: number) =>
   `${cents >= 0 ? "+" : "−"}${euro(Math.abs(cents))}`;
 export const priceEuro = (price: number) => euro(Math.round(price * 100));
 export const currentPrice = (p: Position) =>
-  p.entryPrice * (1 + p.profit / p.amount);
+  p.execution?.marketPrice ?? p.entryPrice * (1 + p.profit / p.amount);
 export const profitPercent = (p: Position) =>
   ((p.profit / p.amount) * 100).toFixed(2);
 export const progress = (p: Position) =>
@@ -122,7 +133,7 @@ export function initialDemo(): DemoState {
     announcement: "",
   };
 }
-export type DemoAction =
+export type DemoAction = (
   | {
       type: "BUY";
       asset: Asset;
@@ -131,6 +142,9 @@ export type DemoAction =
       protection: number | null;
       autoExit: boolean;
       entryPrice?: number;
+      costs?: ExecutionCosts;
+      requestId?: string;
+      now?: number;
     }
   | { type: "MOVE"; mode: "rise" | "fall" | "target" | "tick" }
   | { type: "MARKET_PRICE"; price: number }
@@ -139,7 +153,8 @@ export type DemoAction =
   | { type: "TRANSFER" }
   | { type: "PLAY"; value: boolean }
   | { type: "NEW_TRADE" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+) & { positionId?: number; expectedSequence?: number };
 function event(
   state: DemoState,
   text: string,
@@ -156,7 +171,32 @@ function close(
   position: Position,
   reason: ExitReason,
 ): DemoState {
-  const closed: Position = { ...position, status: "closed", reason };
+  if (
+    state.active?.id !== position.id ||
+    state.completed.some((p) => p.id === position.id)
+  )
+    return state;
+  const execution = position.execution
+    ? {
+        ...position.execution,
+        exit: {
+          ...valuePaper(position.amount, position.execution),
+          closedAt: Math.max(Date.now(), position.execution.entry.openedAt),
+        },
+      }
+    : undefined;
+  const closed: Position = {
+    ...position,
+    status: "closed",
+    reason,
+    ...(execution
+      ? {
+          execution,
+          exitPrice: execution.marketPrice,
+          profit: execution.exit!.netProfit,
+        }
+      : {}),
+  };
   let next: DemoState = {
     ...state,
     active: null,
@@ -186,6 +226,12 @@ function evaluate(
   p: Position,
   marketPrice?: number,
 ): DemoState {
+  if (p.execution) {
+    if (p.protection !== null && p.profit <= -p.protection)
+      return close(state, p, "protection");
+    if (p.autoExit && p.profit >= p.target) return close(state, p, "target");
+    return { ...state, active: p };
+  }
   if (p.protection !== null && p.profit <= -p.protection)
     return close(
       state,
@@ -209,10 +255,26 @@ function evaluate(
   return { ...state, active: p };
 }
 export function demoReducer(state: DemoState, action: DemoAction): DemoState {
+  if (
+    action.expectedSequence !== undefined &&
+    action.expectedSequence !== state.sequence
+  )
+    return state;
+  if (action.positionId !== undefined && action.positionId !== state.active?.id)
+    return state;
   switch (action.type) {
     case "BUY": {
       if (
         state.active ||
+        !Object.hasOwn(ASSETS, action.asset) ||
+        (action.costs !== undefined && !validCosts(action.costs)) ||
+        (action.requestId !== undefined &&
+          (typeof action.requestId !== "string" ||
+            !action.requestId ||
+            action.requestId.length > 100 ||
+            state.completed.some(
+              (p) => p.execution?.entry.requestId === action.requestId,
+            ))) ||
         (action.entryPrice !== undefined &&
           (!Number.isFinite(action.entryPrice) ||
             action.entryPrice <= 0 ||
@@ -228,6 +290,18 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             action.protection >= action.amount))
       )
         return state;
+      let execution: PaperExecution;
+      try {
+        execution = openPaper(
+          action.amount,
+          action.entryPrice ?? ASSETS[action.asset].price,
+          action.now ?? Date.now(),
+          action.requestId ?? `paper-${state.sequence}`,
+          action.costs,
+        );
+      } catch {
+        return state;
+      }
       const position: Position = {
         id: state.sequence,
         asset: action.asset,
@@ -236,7 +310,8 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         protection: action.protection,
         autoExit: action.autoExit,
         entryPrice: action.entryPrice ?? ASSETS[action.asset].price,
-        profit: 0,
+        profit: valuePaper(action.amount, execution).netProfit,
+        execution,
         status: "active",
       };
       let next: DemoState = {
@@ -256,10 +331,13 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         `Profit target set to ${signedEuro(position.target)}${position.autoExit ? " · auto-exit on" : " · manual exit"}`,
         "target",
       );
-      return {
-        ...next,
-        announcement: `${euro(position.amount)} ${position.asset} demo trade opened. Target ${signedEuro(position.target)}. No real funds used.`,
-      };
+      return evaluate(
+        {
+          ...next,
+          announcement: `${euro(position.amount)} ${position.asset} demo trade opened. Net target ${signedEuro(position.target)}. No real funds used.`,
+        },
+        position,
+      );
     }
     case "MARKET_PRICE": {
       const p = state.active;
@@ -270,6 +348,16 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         action.price > 1e9
       )
         return state;
+      if (p.execution) {
+        const execution = { ...p.execution, marketPrice: action.price };
+        const v = valuePaper(p.amount, execution);
+        if (!Number.isSafeInteger(v.proceeds) || v.proceeds < 0) return state;
+        return evaluate(
+          state,
+          { ...p, execution, profit: v.netProfit },
+          action.price,
+        );
+      }
       const profit = Math.max(
         -p.amount + 1,
         Math.round(p.amount * (action.price / p.entryPrice - 1)),
@@ -293,14 +381,30 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             : Math.round(
                 p.target * [0.025, 0.035, -0.018, 0.03][state.tick % 4],
               ) || 1;
-      const profit =
+      let profit =
         action.mode === "target"
           ? p.target
-          : Math.max(-p.amount + 1, p.profit + delta);
-      const next = evaluate(
-        { ...state, tick: state.tick + 1 },
-        { ...p, profit },
-      );
+          : Math.max(
+              -p.amount + 1,
+              (action.mode === "rise" ? Math.max(0, p.profit) : p.profit) +
+                delta,
+            );
+      let updated = { ...p, profit };
+      if (p.execution) {
+        // Demo controls choose an outcome, then generate the market price that pays for it.
+        if (p.protection !== null && profit <= -p.protection)
+          profit = -p.protection;
+        if (p.autoExit && profit >= p.target) profit = p.target;
+        const marketPrice = priceForNetProfit(p.amount, p.execution, profit);
+        if (!validPrice(marketPrice)) return state;
+        const execution = { ...p.execution, marketPrice };
+        updated = {
+          ...p,
+          execution,
+          profit: valuePaper(p.amount, execution).netProfit,
+        };
+      }
+      const next = evaluate({ ...state, tick: state.tick + 1 }, updated);
       return action.mode !== "tick" && next.active
         ? {
             ...next,

@@ -8,6 +8,8 @@ const {
   currentPrice,
 } = loadTypeScript("src/lib/demo-trading.ts");
 const buy = (overrides = {}) => ({
+  // Preserve the original zero-cost regression scenarios alongside realistic-cost tests.
+  costs: { entryFeeBps: 0, exitFeeBps: 0, spreadBps: 0, slippageBps: 0 },
   type: "BUY",
   asset: "BTC",
   amount: 10000,
@@ -66,7 +68,7 @@ test("editing a target evaluates the current position immediately", () => {
   });
   state = reduce(state, { type: "EDIT_TARGET", target: 300 });
   assert.equal(state.active, null);
-  assert.equal(state.cash, 10300);
+  assert.equal(state.cash, 10382); // Selling at the observed price preserves profit above a lowered target.
   assert.equal(state.lastClosed.target, 300);
 });
 test("multiple trade cycles conserve money and exclude sample history", () => {

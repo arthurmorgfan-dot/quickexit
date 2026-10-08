@@ -1,8 +1,16 @@
-import { useState, type Dispatch, type FormEvent } from "react";
+import {
+  openPaper,
+  valuePaper,
+  priceForNetProfit,
+  percentageTarget,
+} from "@/lib/paper-execution";
+import { useRef, useState, type Dispatch, type FormEvent } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import {
+  ASSETS,
   euro,
   signedEuro,
+  priceEuro,
   type Asset,
   type DemoAction,
 } from "@/lib/demo-trading";
@@ -12,11 +20,14 @@ export default function TradeForm({
   asset,
   dispatch,
   disabled = false,
+  price,
 }: {
   asset: Asset;
   disabled?: boolean;
+  price?: number;
   dispatch: Dispatch<DemoAction>;
 }) {
+  const requestId = useRef<string | null>(null);
   const [amount, setAmount] = useState("€100"),
     [amountCustom, setAmountCustom] = useState("100");
   const [target, setTarget] = useState("+€5"),
@@ -34,7 +45,7 @@ export default function TradeForm({
     target.includes("%") || (target === "Custom" && targetUnit === "%");
   const targetValue = read(target, targetCustom),
     targetCents = Math.round(
-      percent ? (amountCents * targetValue) / 100 : targetValue * 100,
+      percent ? percentageTarget(amountCents, targetValue) : targetValue * 100,
     );
   const protectionCents =
     protection === "None"
@@ -54,6 +65,11 @@ export default function TradeForm({
     (Number.isFinite(protectionCents) &&
       protectionCents >= 1 &&
       protectionCents < amountCents);
+  const preview =
+    validAmount && validTarget
+      ? openPaper(amountCents, price ?? ASSETS[asset].price, 1, "preview")
+      : null;
+  const estimate = preview ? valuePaper(amountCents, preview) : null;
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validAmount || !validTarget || !validProtection) {
@@ -67,8 +83,10 @@ export default function TradeForm({
       return;
     }
     setError("");
+    requestId.current ??= crypto.randomUUID();
     dispatch({
       type: "BUY",
+      requestId: requestId.current,
       asset,
       amount: amountCents,
       target: targetCents,
@@ -99,7 +117,7 @@ export default function TradeForm({
       />
       <ChoiceField
         label="Profit target"
-        hint="Your exit point"
+        hint="After simulated costs"
         options={["+€1", "+€2", "+€5", "+1%", "+2%", "Custom"]}
         value={target}
         onChange={setTarget}
@@ -127,10 +145,10 @@ export default function TradeForm({
         <ArrowRight size={14} />
         {validAmount && validTarget ? (
           <>
-            Exit at <strong>{signedEuro(targetCents)}</strong> profit
+            Exit at <strong>{signedEuro(targetCents)}</strong> net profit
             {percent && (
               <span>
-                ({targetValue}% of {euro(amountCents)})
+                ({targetValue}% net return on {euro(amountCents)})
               </span>
             )}
           </>
@@ -138,6 +156,22 @@ export default function TradeForm({
           "Choose your amount and target"
         )}
       </div>
+      {preview && estimate && (
+        <p className="qw-micro">
+          Estimated net target market price:{" "}
+          {priceEuro(priceForNetProfit(amountCents, preview, targetCents))}.
+          Entry and exit costs apply.
+        </p>
+      )}
+      {estimate &&
+        protectionCents !== null &&
+        estimate.netProfit <= -protectionCents && (
+          <p className="qw-micro" role="status">
+            Estimated opening costs already meet this protection level. This
+            paper trade would close immediately. Choose a wider protection level
+            to monitor it.
+          </p>
+        )}
       <MobileDisclosure
         label="Downside protection"
         hint={

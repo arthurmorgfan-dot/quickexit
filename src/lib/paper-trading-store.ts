@@ -84,6 +84,7 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
     if (restored.source === "unavailable") publish(next);
     else if (
       restored.source === "recovered" ||
+      ("migrated" in restored && restored.migrated) ||
       (initial && restored.source === "empty")
     )
       write(next);
@@ -204,6 +205,7 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
         ? demoReducer(snapshot.state, {
             type: "MARKET_PRICE",
             price: clean[snapshot.state.active.asset].price,
+            positionId: snapshot.state.active.id,
           })
         : snapshot.state;
       write({

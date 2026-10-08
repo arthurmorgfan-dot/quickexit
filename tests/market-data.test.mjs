@@ -11,6 +11,8 @@ const { decodePaperTrading, PAPER_TRADING_KEY } = loadTypeScript(
   "src/lib/paper-trading-storage.ts",
 );
 const buy = {
+  // Preserve the original zero-cost regression scenarios alongside realistic-cost tests.
+  costs: { entryFeeBps: 0, exitFeeBps: 0, spreadBps: 0, slippageBps: 0 },
   type: "BUY",
   asset: "BTC",
   amount: 10000,

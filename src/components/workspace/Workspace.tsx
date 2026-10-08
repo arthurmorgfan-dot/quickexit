@@ -1,4 +1,5 @@
 "use client";
+import { PAPER_COSTS, basisPercent } from "@/lib/paper-execution";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -127,7 +128,7 @@ export default function Workspace() {
     )
       return;
     const interval = window.setInterval(
-      () => dispatch({ type: "MOVE", mode: "tick" }),
+      () => dispatch({ type: "MOVE", mode: "tick", positionId: activeId }),
       4000,
     );
     return () => window.clearInterval(interval);
@@ -346,6 +347,7 @@ export default function Workspace() {
                     asset={asset}
                     dispatch={dispatch}
                     disabled={live && !usableQuote}
+                    price={live && quote ? quote.price : ASSETS[asset].price}
                   />
                 )}
               </div>
@@ -376,7 +378,7 @@ export default function Workspace() {
                       : "No idle investment balance",
                   },
                   {
-                    label: "Current profit",
+                    label: "Current net profit",
                     value: signedEuro(state.active?.profit ?? 0),
                     note: state.active
                       ? "Your active position"
@@ -459,7 +461,9 @@ export default function Workspace() {
               cash={state.cash}
               lastTransfer={state.lastTransfer}
               sent={state.sent}
-              onTransfer={() => dispatch({ type: "TRANSFER" })}
+              onTransfer={() =>
+                dispatch({ type: "TRANSFER", expectedSequence: state.sequence })
+              }
               onTrade={newTrade}
             />
           )}{" "}
@@ -519,6 +523,20 @@ export default function Workspace() {
                       paper-trading demo is ready.
                     </p>
                   )}
+                </div>
+                <div className="qw-setting-info">
+                  <span>Paper trading assumptions</span>
+                  <strong>
+                    Entry fee {basisPercent(PAPER_COSTS.entryFeeBps)} · Exit fee{" "}
+                    {basisPercent(PAPER_COSTS.exitFeeBps)}
+                  </strong>
+                  <p>
+                    Spread {basisPercent(PAPER_COSTS.spreadBps)} (half per side)
+                    · Slippage {basisPercent(PAPER_COSTS.slippageBps)} per side.
+                    Investment includes the entry fee. Targets and percentage
+                    returns are net of estimated costs. Each trade keeps its
+                    opening assumptions. Actual exchange execution can differ.
+                  </p>
                 </div>
                 <div className="qw-setting-info">
                   <span>Currency</span>

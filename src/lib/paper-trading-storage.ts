@@ -1,3 +1,4 @@
+import { restoreExecution } from "./paper-execution";
 import {
   initialMarket,
   validQuote,
@@ -15,7 +16,7 @@ import {
 
 /** One owned key; incompatible schema versions start a clean demo rather than guessing. */
 export const PAPER_TRADING_KEY = "quickexit.paper-trading";
-export const PAPER_TRADING_VERSION = 2;
+export const PAPER_TRADING_VERSION = 3;
 const MAX_STORED_LENGTH = 2_000_000;
 const MAX_HISTORY = 10_000;
 export type DeviceStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -26,6 +27,7 @@ export type PaperTrading = {
 };
 export type Restoration = PaperTrading & {
   source: "empty" | "restored" | "recovered" | "unavailable";
+  migrated?: boolean;
 };
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -41,7 +43,11 @@ const integer = (
 export const isAsset = (value: unknown): value is Asset =>
   typeof value === "string" && Object.hasOwn(ASSETS, value);
 
-function position(value: unknown, status: Position["status"]): Position | null {
+function position(
+  value: unknown,
+  status: Position["status"],
+  version = PAPER_TRADING_VERSION,
+): Position | null {
   if (
     !record(value) ||
     !integer(value.id, -3) ||
@@ -55,7 +61,10 @@ function position(value: unknown, status: Position["status"]): Position | null {
     !Number.isFinite(value.entryPrice) ||
     value.entryPrice <= 0 ||
     value.entryPrice > 1_000_000_000 ||
-    !integer(value.profit, -value.amount + 1) ||
+    !integer(
+      value.profit,
+      value.execution ? -value.amount : -value.amount + 1,
+    ) ||
     !Number.isSafeInteger(value.amount + value.profit)
   )
     return null;
@@ -68,7 +77,32 @@ function position(value: unknown, status: Position["status"]): Position | null {
     return null;
   const example = value.example === true;
   if (example !== value.id < 0 || (example && status !== "closed")) return null;
+  const execution =
+    value.execution === undefined
+      ? undefined
+      : restoreExecution(
+          value.execution,
+          value.amount,
+          value.profit,
+          status === "closed",
+        );
   if (
+    execution === null ||
+    (execution &&
+      (execution.entry.quotedPrice !== value.entryPrice ||
+        value.example === true ||
+        (status === "closed" && value.exitPrice !== execution.marketPrice)))
+  )
+    return null;
+  if (
+    !example &&
+    !execution &&
+    version === PAPER_TRADING_VERSION &&
+    value.legacy !== true
+  )
+    return null;
+  if (
+    !execution &&
     value.exitPrice !== undefined &&
     (status !== "closed" ||
       !validQuote({ price: value.exitPrice, updatedAt: 1 }) ||
@@ -125,6 +159,7 @@ function position(value: unknown, status: Position["status"]): Position | null {
       ? { reason: value.reason as Position["reason"] }
       : {}),
     ...(example ? { example: true } : {}),
+    ...(execution ? { execution } : !example ? { legacy: true } : {}),
     ...(value.exitPrice === undefined
       ? {}
       : { exitPrice: value.exitPrice as number }),
@@ -154,13 +189,14 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
     const data: unknown = JSON.parse(raw);
     if (
       !record(data) ||
-      (data.version !== PAPER_TRADING_VERSION && data.version !== 1) ||
+      ![1, 2, PAPER_TRADING_VERSION].includes(Number(data.version)) ||
+      typeof data.version !== "number" ||
       !isAsset(data.selectedAsset) ||
       !record(data.state)
     )
       return null;
     const market = initialMarket();
-    if (data.version === PAPER_TRADING_VERSION && data.market !== undefined) {
+    if (data.version !== 1 && data.market !== undefined) {
       if (
         !record(data.market) ||
         !["live", "demo"].includes(String(data.market.mode)) ||
@@ -194,9 +230,14 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
       typeof s.playing !== "boolean"
     )
       return null;
-    const active = s.active === null ? null : position(s.active, "active");
+    const active =
+      s.active === null
+        ? null
+        : position(s.active, "active", data.version as number);
     if (s.active !== null && !active) return null;
-    const completed = s.completed.map((value) => position(value, "closed"));
+    const completed = s.completed.map((value) =>
+      position(value, "closed", data.version as number),
+    );
     const events = s.events.map(activity);
     if (completed.some((p) => p === null) || events.some((e) => e === null))
       return null;
@@ -209,6 +250,10 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
       new Set(validEvents.map((e) => e.id)).size !== validEvents.length
     )
       return null;
+    const requestIds = [...(active ? [active] : []), ...validCompleted].flatMap(
+      (p) => (p.execution ? [p.execution.entry.requestId] : []),
+    );
+    if (new Set(requestIds).size !== requestIds.length) return null;
     // Seed examples are always canonical and never contribute to cash or returns.
     const examples = initialDemo().completed;
     if (
@@ -231,7 +276,9 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
     )
       return null;
     const lastClosedCandidate =
-      s.lastClosed === null ? null : position(s.lastClosed, "closed");
+      s.lastClosed === null
+        ? null
+        : position(s.lastClosed, "closed", data.version as number);
     const lastClosed = lastClosedCandidate
       ? (realCompleted.find(
           (p) =>
@@ -308,7 +355,11 @@ export function loadPaperTrading(storage: DeviceStorage): Restoration {
     if (raw === null) return { ...clean, source: "empty" };
     const restored = decodePaperTrading(raw);
     return restored
-      ? { ...restored, source: "restored" }
+      ? {
+          ...restored,
+          source: "restored",
+          migrated: JSON.parse(raw).version !== PAPER_TRADING_VERSION,
+        }
       : { ...clean, source: "recovered" };
   } catch {
     return { ...clean, source: "unavailable" };

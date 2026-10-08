@@ -1957,3 +1957,40 @@
   color: var(--foreground);
   font-weight: 500;
 }
+
+.qw-cost-breakdown {
+  border-top: 1px solid var(--border);
+  margin: 12px 0 18px;
+  color: var(--qw-muted);
+  font-size: 11px;
+}
+.qw-cost-breakdown summary {
+  cursor: pointer;
+  padding: 14px 0;
+  min-height: 44px;
+  color: var(--foreground);
+}
+.qw-cost-breakdown summary:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.qw-cost-breakdown dl {
+  margin: 0;
+}
+.qw-cost-breakdown dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+}
+.qw-cost-breakdown dd {
+  color: var(--foreground);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.qw-cost-breakdown p {
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: left;
+}

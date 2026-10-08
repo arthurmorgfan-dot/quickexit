@@ -1,3 +1,4 @@
+import ExecutionBreakdown from "./ExecutionBreakdown";
 import { useState, type Dispatch, type FormEvent } from "react";
 import {
   ArrowUpRight,
@@ -43,7 +44,7 @@ export function ActivePosition({
       setError("Enter a target between €0.01 and €10,000.");
       return;
     }
-    dispatch({ type: "EDIT_TARGET", target: value });
+    dispatch({ type: "EDIT_TARGET", target: value, positionId: p.id });
     setEditing(false);
     setError("");
   };
@@ -55,7 +56,7 @@ export function ActivePosition({
           <span className="status-dot" /> ACTIVE
         </span>
       </div>
-      <div className="qw-profit-label">Current profit</div>
+      <div className="qw-profit-label">Current net profit</div>
       <div className={`qw-profit ${p.profit < 0 ? "qw-negative" : ""}`}>
         {signedEuro(p.profit)}
         <span>
@@ -72,7 +73,7 @@ export function ActivePosition({
       <div
         className="progress-track"
         role="progressbar"
-        aria-label="Profit target progress"
+        aria-label="Net profit target progress"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={progress(p)}
@@ -101,7 +102,7 @@ export function ActivePosition({
           <dd>{euro(p.amount)}</dd>
         </div>
         <div>
-          <dt>Current value</dt>
+          <dt>Estimated proceeds</dt>
           <dd>{euro(p.amount + p.profit)}</dd>
         </div>
       </dl>
@@ -120,11 +121,11 @@ export function ActivePosition({
             <dd>{euro(p.amount)}</dd>
           </div>
           <div>
-            <dt>Current value</dt>
+            <dt>Estimated proceeds</dt>
             <dd>{euro(p.amount + p.profit)}</dd>
           </div>
           <div>
-            <dt>Entry price</dt>
+            <dt>Quoted entry</dt>
             <dd>{priceEuro(p.entryPrice)}</dd>
           </div>
           <div>
@@ -147,8 +148,11 @@ export function ActivePosition({
           </div>
         </dl>
       </MobileDisclosure>
+      <ExecutionBreakdown position={p} />
       <div className="qw-position-actions">
-        <ActionButton onClick={() => dispatch({ type: "SELL" })}>
+        <ActionButton
+          onClick={() => dispatch({ type: "SELL", positionId: p.id })}
+        >
           Sell Now
         </ActionButton>
         <button
@@ -221,19 +225,25 @@ export function ActivePosition({
             <div className="qw-demo-options">
               <button
                 type="button"
-                onClick={() => dispatch({ type: "MOVE", mode: "rise" })}
+                onClick={() =>
+                  dispatch({ type: "MOVE", mode: "rise", positionId: p.id })
+                }
               >
                 <TrendingUp size={13} /> Profit rises
               </button>
               <button
                 type="button"
-                onClick={() => dispatch({ type: "MOVE", mode: "fall" })}
+                onClick={() =>
+                  dispatch({ type: "MOVE", mode: "fall", positionId: p.id })
+                }
               >
                 <TrendingDown size={13} /> Profit falls
               </button>
               <button
                 type="button"
-                onClick={() => dispatch({ type: "MOVE", mode: "target" })}
+                onClick={() =>
+                  dispatch({ type: "MOVE", mode: "target", positionId: p.id })
+                }
               >
                 <Check size={13} /> Reach target
               </button>
@@ -277,7 +287,7 @@ export function ClosedPosition({
       <h2 id="closed-title">{reasonLabel(p)}</h2>
       <div className={`qw-profit ${success ? "" : "qw-negative"}`}>
         {signedEuro(p.profit)}
-        <span>{success ? "profit" : "loss"}</span>
+        <span>{success ? "net profit" : "net loss"}</span>
       </div>
       <p>
         Position closed {p.reason === "manual" ? "manually" : "automatically"}.
@@ -304,6 +314,7 @@ export function ClosedPosition({
           <dd>{euro(cash)}</dd>
         </div>
       </dl>
+      <ExecutionBreakdown position={p} />
       <ActionButton onClick={onCashOut} disabled={cash === 0}>
         Send to Bank
       </ActionButton>
