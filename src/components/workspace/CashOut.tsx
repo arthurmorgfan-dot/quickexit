@@ -17,7 +17,7 @@ export default function CashOut({
   const success = lastTransfer > 0 && cash === 0;
   return (
     <div className="qw-cash-layout">
-      <section className="qw-card qw-cash-card">
+      <section className={`qw-card qw-cash-card ${success ? "is-sent" : ""}`}>
         <div className={`qw-closed-icon ${success ? "" : "qw-bank-icon"}`}>
           {success ? <CircleCheck size={32} /> : <Landmark size={30} />}
         </div>

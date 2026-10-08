@@ -21,6 +21,7 @@ import {
   type DemoAction,
 } from "@/lib/demo-trading";
 import { ActionButton, Switch } from "./Controls";
+import MobileDisclosure from "./MobileDisclosure";
 export function ActivePosition({
   position: p,
   dispatch,
@@ -86,7 +87,13 @@ export function ActivePosition({
               ? "When you reach your target, your position closes automatically."
               : "Auto-exit is off. You choose when to close this position."}
       </p>
-      <dl className="qw-position-details">
+      <div className={`qw-mobile-exit-status ${p.autoExit ? "" : "is-off"}`}>
+        <Zap size={15} />
+        <span>
+          Auto-exit <strong>{p.autoExit ? "enabled" : "off"}</strong>
+        </span>
+      </div>
+      <dl className="qw-mobile-position-summary">
         <div>
           <dt>Invested</dt>
           <dd>{euro(p.amount)}</dd>
@@ -95,29 +102,49 @@ export function ActivePosition({
           <dt>Current value</dt>
           <dd>{euro(p.amount + p.profit)}</dd>
         </div>
-        <div>
-          <dt>Entry price</dt>
-          <dd>{priceEuro(p.entryPrice)}</dd>
-        </div>
-        <div>
-          <dt>Current price</dt>
-          <dd>{priceEuro(currentPrice(p))}</dd>
-        </div>
-        <div>
-          <dt>
-            <ShieldCheck size={12} /> Protection
-          </dt>
-          <dd>{p.protection === null ? "None" : `−${euro(p.protection)}`}</dd>
-        </div>
-        <div>
-          <dt>
-            <Zap size={12} /> Auto-exit
-          </dt>
-          <dd className={p.autoExit ? "qw-positive" : ""}>
-            {p.autoExit ? "Enabled" : "Off"}
-          </dd>
-        </div>
       </dl>
+      <MobileDisclosure
+        label="Position details"
+        hint={
+          p.protection === null
+            ? "No downside protection"
+            : `Protection −${euro(p.protection)}`
+        }
+        className="qw-position-disclosure"
+      >
+        <dl className="qw-position-details">
+          <div>
+            <dt>Invested</dt>
+            <dd>{euro(p.amount)}</dd>
+          </div>
+          <div>
+            <dt>Current value</dt>
+            <dd>{euro(p.amount + p.profit)}</dd>
+          </div>
+          <div>
+            <dt>Entry price</dt>
+            <dd>{priceEuro(p.entryPrice)}</dd>
+          </div>
+          <div>
+            <dt>Current price</dt>
+            <dd>{priceEuro(currentPrice(p))}</dd>
+          </div>
+          <div>
+            <dt>
+              <ShieldCheck size={12} /> Protection
+            </dt>
+            <dd>{p.protection === null ? "None" : `−${euro(p.protection)}`}</dd>
+          </div>
+          <div>
+            <dt>
+              <Zap size={12} /> Auto-exit
+            </dt>
+            <dd className={p.autoExit ? "qw-positive" : ""}>
+              {p.autoExit ? "Enabled" : "Off"}
+            </dd>
+          </div>
+        </dl>
+      </MobileDisclosure>
       <div className="qw-position-actions">
         <ActionButton onClick={() => dispatch({ type: "SELL" })}>
           Sell Now
@@ -131,6 +158,15 @@ export function ActivePosition({
             setTarget(String(p.target / 100));
             setEditing(!editing);
             setError("");
+            if (!editing && window.matchMedia("(max-width: 700px)").matches) {
+              window.requestAnimationFrame(() => {
+                const input = document.getElementById("edit-target");
+                input?.focus();
+                input
+                  ?.closest("form")
+                  ?.scrollIntoView({ block: "center", behavior: "instant" });
+              });
+            }
           }}
         >
           <Pencil size={13} /> Edit Target
@@ -169,38 +205,44 @@ export function ActivePosition({
           </p>
         )}
       </form>
-      <div className="qw-demo-controls">
-        <div className="qw-demo-title">
-          <span>DEMO CONTROLS</span>
-          <span>Try an outcome</span>
+      <MobileDisclosure
+        label="Try a demo outcome"
+        hint="Raise profit, lower it, or reach your target"
+        className="qw-demo-disclosure"
+      >
+        <div className="qw-demo-controls">
+          <div className="qw-demo-title">
+            <span>DEMO CONTROLS</span>
+            <span>Try an outcome</span>
+          </div>
+          <div className="qw-demo-options">
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "MOVE", mode: "rise" })}
+            >
+              <TrendingUp size={13} /> Profit rises
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "MOVE", mode: "fall" })}
+            >
+              <TrendingDown size={13} /> Profit falls
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "MOVE", mode: "target" })}
+            >
+              <Check size={13} /> Reach target
+            </button>
+          </div>
+          <Switch
+            label="Subtle price movement"
+            description="Pause to explore at your own pace."
+            checked={playing}
+            onChange={(value) => dispatch({ type: "PLAY", value })}
+          />
         </div>
-        <div className="qw-demo-options">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "MOVE", mode: "rise" })}
-          >
-            <TrendingUp size={13} /> Profit rises
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "MOVE", mode: "fall" })}
-          >
-            <TrendingDown size={13} /> Profit falls
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "MOVE", mode: "target" })}
-          >
-            <Check size={13} /> Reach target
-          </button>
-        </div>
-        <Switch
-          label="Subtle price movement"
-          description="Pause to explore at your own pace."
-          checked={playing}
-          onChange={(value) => dispatch({ type: "PLAY", value })}
-        />
-      </div>
+      </MobileDisclosure>
       <p className="qw-micro">
         Simulation only. Real targets and protection are not guaranteed.
       </p>

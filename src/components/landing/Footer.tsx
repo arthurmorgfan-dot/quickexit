@@ -36,10 +36,12 @@ export default function Footer() {
           <summary>Prototype privacy notice</summary>
           <p>
             This prototype has no account forms or analytics added by QuickExit.
-            Preview selections stay in your browser memory and reset on reload.
-            No trade or payment information is submitted. Hosting providers may
-            process standard request logs. A full privacy policy will be
-            provided before a live service launches.
+            Landing-page preview selections stay in browser memory and reset on
+            reload. Workspace paper-trading data is saved on this device until
+            you reset the demo or clear browser storage. No trade or payment
+            information is submitted. Hosting providers may process standard
+            request logs. A full privacy policy will be provided before a live
+            service launches.
           </p>
         </details>
         <details id="terms">

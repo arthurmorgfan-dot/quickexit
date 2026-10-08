@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MobileDisclosure from "./MobileDisclosure";
 import { ASSETS, priceEuro, type Asset } from "@/lib/demo-trading";
 export function AssetMark({ asset }: { asset: Asset }) {
   return (
@@ -71,64 +72,70 @@ export default function MarketCard({
         </span>
       </div>
       <div className="qw-price">{priceEuro(price)}</div>
-      <div className="qw-chart-toolbar">
-        <span>
-          Price overview <span>· Mock data</span>
-        </span>
-        <div aria-label="Chart timeframe">
-          {(Object.keys(paths) as (keyof typeof paths)[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={t === timeframe}
-              className={t === timeframe ? "is-selected" : ""}
-              onClick={() => setTimeframe(t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-      <svg
-        viewBox="0 0 600 210"
-        className="qw-chart"
-        role="img"
-        aria-label={`${ASSETS[asset].name} illustrative ${timeframe} price chart. Not live market data.`}
+      <MobileDisclosure
+        label="Price chart"
+        hint="Illustrative market · not live data"
+        className="qw-chart-disclosure"
       >
-        <defs>
-          <linearGradient id="qw-chart-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#96edb9" stopOpacity=".14" />
-            <stop offset="100%" stopColor="#96edb9" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M0 40H600 M0 95H600 M0 150H600 M0 205H600"
-          stroke="#ffffff"
-          strokeOpacity=".055"
-        />
-        <path d={`${paths[timeframe]} V210 H0Z`} fill="url(#qw-chart-fill)" />
-        <path
-          d={paths[timeframe]}
-          fill="none"
-          stroke="#96edb9"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <circle cx="600" cy="21" r="4" fill="#96edb9" />
-      </svg>
-      <div className="qw-chart-axis">
-        <span>
-          {timeframe === "1H"
-            ? "1 hour"
-            : timeframe === "1D"
-              ? "24 hours"
-              : timeframe === "1W"
-                ? "7 days"
-                : "30 days"}{" "}
-          ago
-        </span>
-        <span>Demo now</span>
-      </div>
+        <div className="qw-chart-toolbar">
+          <span>
+            Price overview <span>· Mock data</span>
+          </span>
+          <div aria-label="Chart timeframe">
+            {(Object.keys(paths) as (keyof typeof paths)[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={t === timeframe}
+                className={t === timeframe ? "is-selected" : ""}
+                onClick={() => setTimeframe(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <svg
+          viewBox="0 0 600 210"
+          className="qw-chart"
+          role="img"
+          aria-label={`${ASSETS[asset].name} illustrative ${timeframe} price chart. Not live market data.`}
+        >
+          <defs>
+            <linearGradient id="qw-chart-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#96edb9" stopOpacity=".14" />
+              <stop offset="100%" stopColor="#96edb9" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0 40H600 M0 95H600 M0 150H600 M0 205H600"
+            stroke="#ffffff"
+            strokeOpacity=".055"
+          />
+          <path d={`${paths[timeframe]} V210 H0Z`} fill="url(#qw-chart-fill)" />
+          <path
+            d={paths[timeframe]}
+            fill="none"
+            stroke="#96edb9"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <circle cx="600" cy="21" r="4" fill="#96edb9" />
+        </svg>
+        <div className="qw-chart-axis">
+          <span>
+            {timeframe === "1H"
+              ? "1 hour"
+              : timeframe === "1D"
+                ? "24 hours"
+                : timeframe === "1W"
+                  ? "7 days"
+                  : "30 days"}{" "}
+            ago
+          </span>
+          <span>Demo now</span>
+        </div>
+      </MobileDisclosure>
       <div className="qw-market-foot">
         <span>
           Less chart-watching.

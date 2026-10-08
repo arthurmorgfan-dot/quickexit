@@ -7,6 +7,7 @@ import {
   type DemoAction,
 } from "@/lib/demo-trading";
 import { ActionButton, ChoiceField, Switch } from "./Controls";
+import MobileDisclosure from "./MobileDisclosure";
 export default function TradeForm({
   asset,
   dispatch,
@@ -135,22 +136,34 @@ export default function TradeForm({
           "Choose your amount and target"
         )}
       </div>
-      <div className="qw-protection">
-        <ChoiceField
-          label="Protection"
-          hint="Optional"
-          options={["None", "−€1", "−€2", "−€5", "Custom"]}
-          value={protection}
-          onChange={setProtection}
-          custom={protectionCustom}
-          onCustomChange={setProtectionCustom}
-          inputId="trade-protection"
-        />
-        <p>
-          <ShieldCheck size={12} /> A downside exit. Not a guaranteed loss
-          limit.
-        </p>
-      </div>
+      <MobileDisclosure
+        label="Downside protection"
+        hint={
+          protection === "None"
+            ? "Optional · currently off"
+            : protection === "Custom"
+              ? `Custom · −${euro(protectionCents ?? 0)}`
+              : `Selected ${protection}`
+        }
+        className="qw-protection-disclosure"
+      >
+        <div className="qw-protection">
+          <ChoiceField
+            label="Protection"
+            hint="Optional"
+            options={["None", "−€1", "−€2", "−€5", "Custom"]}
+            value={protection}
+            onChange={setProtection}
+            custom={protectionCustom}
+            onCustomChange={setProtectionCustom}
+            inputId="trade-protection"
+          />
+          <p>
+            <ShieldCheck size={12} /> A downside exit. Not a guaranteed loss
+            limit.
+          </p>
+        </div>
+      </MobileDisclosure>
       <Switch
         label="Auto-exit when profit target is reached"
         checked={auto}

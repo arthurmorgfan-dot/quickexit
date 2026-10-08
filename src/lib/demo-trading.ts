@@ -304,7 +304,6 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case "RESET":
       return {
         ...initialDemo(),
-        playing: state.playing,
         announcement: "Demo reset. No real funds were affected.",
       };
   }

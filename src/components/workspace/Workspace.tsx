@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   House,
@@ -12,19 +12,14 @@ import {
   FlaskConical,
   ArrowRight,
   ShieldCheck,
-  X,
-  Menu,
   RotateCcw,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import {
   ASSETS,
-  demoReducer,
-  initialDemo,
   euro,
   signedEuro,
   currentPrice,
-  type Asset,
   type View,
 } from "@/lib/demo-trading";
 import { ActionButton, Switch } from "./Controls";
@@ -34,6 +29,8 @@ import { ActivePosition, ClosedPosition } from "./PositionCard";
 import ActivityList from "./ActivityList";
 import CashOut from "./CashOut";
 import Positions from "./Positions";
+import MobileDisclosure from "./MobileDisclosure";
+import usePersistentDemo from "./usePersistentDemo";
 const navigation = [
   { name: "Home", icon: House },
   { name: "Trade", icon: ChartNoAxesCombined },
@@ -51,19 +48,38 @@ const descriptions: Record<View, string> = {
   Settings: "A demo that moves at your pace.",
 };
 export default function Workspace() {
-  const [state, dispatch] = useReducer(demoReducer, undefined, initialDemo),
-    [view, setView] = useState<View>("Trade"),
-    [asset, setAsset] = useState<Asset>("BTC"),
-    [mobileMenu, setMobileMenu] = useState(false),
+  const {
+    state,
+    asset,
+    dispatch,
+    setAsset,
+    resetDemo,
+    hydrated,
+    storageStatus,
+    recovered,
+  } = usePersistentDemo();
+  const [view, setView] = useState<View>("Trade"),
     [confirmReset, setConfirmReset] = useState(false);
-  const titleRef = useRef<HTMLHeadingElement>(null),
-    menuRef = useRef<HTMLButtonElement>(null);
+  const saveLabel =
+    storageStatus === "loading"
+      ? "Restoring demo…"
+      : storageStatus === "saved"
+        ? "Saved on this device"
+        : "Not saved on this device";
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const navigate = (next: View) => {
     setView(next);
-    setMobileMenu(false);
+    setConfirmReset(false);
+    window.requestAnimationFrame(() => {
+      titleRef.current?.focus({ preventScroll: true });
+      if (window.matchMedia("(max-width: 700px)").matches)
+        window.scrollTo({ top: 0, behavior: "instant" });
+    });
+  };
+  const cancelReset = () => {
     setConfirmReset(false);
     window.requestAnimationFrame(() =>
-      titleRef.current?.focus({ preventScroll: true }),
+      document.getElementById("reset-demo-button")?.focus(),
     );
   };
   const newTrade = () => {
@@ -71,14 +87,14 @@ export default function Workspace() {
     navigate("Trade");
   };
   useEffect(() => {
+    if (!hydrated) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const pause = () => {
       if (reduced.matches) dispatch({ type: "PLAY", value: false });
     };
-    pause();
     reduced.addEventListener("change", pause);
     return () => reduced.removeEventListener("change", pause);
-  }, []);
+  }, [hydrated, dispatch]);
   const activeId = state.active?.id;
   const previousActiveId = useRef(activeId);
   useEffect(() => {
@@ -91,44 +107,41 @@ export default function Workspace() {
     if (destination) {
       destination.tabIndex = -1;
       destination.focus({ preventScroll: true });
+      if (window.matchMedia("(max-width: 700px)").matches) {
+        destination
+          .closest("section")
+          ?.scrollIntoView({ block: "start", behavior: "instant" });
+      }
     }
   }, [activeId, view]);
   useEffect(() => {
-    if (activeId === undefined || !state.playing) return;
+    if (!hydrated || activeId === undefined || !state.playing) return;
     const interval = window.setInterval(
       () => dispatch({ type: "MOVE", mode: "tick" }),
       4000,
     );
     return () => window.clearInterval(interval);
-  }, [activeId, state.playing]);
-  useEffect(() => {
-    if (!mobileMenu) return;
-    const close = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMobileMenu(false);
-        menuRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [mobileMenu]);
+  }, [activeId, state.playing, hydrated, dispatch]);
   const selectedAsset = state.active?.asset ?? asset;
   const realised = state.completed
     .filter((p) => !p.example)
     .reduce((sum, p) => sum + p.profit, 0);
   return (
-    <div className="qe-workspace">
+    <div
+      className="qe-workspace"
+      aria-busy={!hydrated}
+      inert={!hydrated}
+      data-trade-state={
+        state.active ? "active" : state.lastClosed ? "closed" : "new"
+      }
+    >
       <a className="skip-link" href="#workspace-main">
         Skip to workspace
       </a>
       <aside className="qw-sidebar">
         <Brand href="/" />
         <div className="qw-sidebar-label">YOUR WORKSPACE</div>
-        <nav
-          aria-label="Workspace navigation"
-          id="workspace-navigation"
-          className={mobileMenu ? "is-open" : ""}
-        >
+        <nav aria-label="Workspace navigation" id="workspace-navigation">
           {navigation.map(({ name, icon: Icon }) => (
             <button
               type="button"
@@ -154,9 +167,9 @@ export default function Workspace() {
             </div>
           </div>
           <p>
-            Local state only.
+            {saveLabel}
             <br />
-            Refresh to start fresh.
+            Simulated funds only.
           </p>
           <Link href="/">
             Back to QuickExit <ArrowUpRight size={14} />
@@ -166,21 +179,6 @@ export default function Workspace() {
       <div className="qw-app">
         <header className="qw-topbar">
           <div>
-            <button
-              ref={menuRef}
-              type="button"
-              className="qw-menu"
-              aria-label={
-                mobileMenu
-                  ? "Close workspace navigation"
-                  : "Open workspace navigation"
-              }
-              aria-expanded={mobileMenu}
-              aria-controls="workspace-navigation"
-              onClick={() => setMobileMenu(!mobileMenu)}
-            >
-              {mobileMenu ? <X size={21} /> : <Menu size={21} />}
-            </button>
             <span>
               Workspace <span className="qw-breadcrumb">/</span>
               <strong>{view}</strong>
@@ -190,6 +188,15 @@ export default function Workspace() {
             <span className="qw-badge">
               <span className="status-dot" /> PROTOTYPE
             </span>
+            <button
+              type="button"
+              className="qw-mobile-home"
+              aria-label="Workspace Home"
+              aria-current={view === "Home" ? "page" : undefined}
+              onClick={() => navigate("Home")}
+            >
+              <House size={19} />
+            </button>
             <span className="qw-avatar" aria-label="Demo profile">
               D
             </span>
@@ -238,49 +245,56 @@ export default function Workspace() {
           {view === "Trade" && (
             <>
               <div className="qw-trade-layout">
-                <div className="qw-market-column">
-                  <MarketCard
-                    asset={selectedAsset}
-                    setAsset={setAsset}
-                    locked={!!state.active}
-                    price={
-                      state.active
-                        ? currentPrice(state.active)
-                        : ASSETS[selectedAsset].price
-                    }
-                  />
-                  <div className="qw-plan-card">
-                    <span className="qw-overline">
-                      THE WAY OUT IS THE POINT.
-                    </span>
-                    <h2>
-                      Trade it. Profit.
-                      <br />
-                      <span>Send it home.</span>
-                    </h2>
-                    <div className="qw-plan-steps">
-                      <span
-                        className={
-                          state.active || state.lastClosed ? "is-done" : ""
-                        }
-                      >
-                        01 <strong>Choose your trade</strong>
+                <MobileDisclosure
+                  label="Market overview"
+                  hint={`${selectedAsset} · simulated prices`}
+                  className="qw-market-disclosure"
+                  enabled={!!state.active || !!state.lastClosed}
+                >
+                  <div className="qw-market-column">
+                    <MarketCard
+                      asset={selectedAsset}
+                      setAsset={setAsset}
+                      locked={!!state.active}
+                      price={
+                        state.active
+                          ? currentPrice(state.active)
+                          : ASSETS[selectedAsset].price
+                      }
+                    />
+                    <div className="qw-plan-card">
+                      <span className="qw-overline">
+                        THE WAY OUT IS THE POINT.
                       </span>
-                      <ArrowRight size={13} />
-                      <span className={state.lastClosed ? "is-done" : ""}>
-                        02 <strong>Reach your exit</strong>
-                      </span>
-                      <ArrowRight size={13} />
-                      <span>
-                        03 <strong>Send it home</strong>
-                      </span>
+                      <h2>
+                        Trade it. Profit.
+                        <br />
+                        <span>Send it home.</span>
+                      </h2>
+                      <div className="qw-plan-steps">
+                        <span
+                          className={
+                            state.active || state.lastClosed ? "is-done" : ""
+                          }
+                        >
+                          01 <strong>Choose your trade</strong>
+                        </span>
+                        <ArrowRight size={13} />
+                        <span className={state.lastClosed ? "is-done" : ""}>
+                          02 <strong>Reach your exit</strong>
+                        </span>
+                        <ArrowRight size={13} />
+                        <span>
+                          03 <strong>Send it home</strong>
+                        </span>
+                      </div>
+                      <p>
+                        Money enters for a trade. When the trade ends, the money
+                        leaves.
+                      </p>
                     </div>
-                    <p>
-                      Money enters for a trade. When the trade ends, the money
-                      leaves.
-                    </p>
                   </div>
-                </div>
+                </MobileDisclosure>
                 {state.active ? (
                   <ActivePosition
                     key={state.active.id}
@@ -427,6 +441,21 @@ export default function Workspace() {
                   onChange={(value) => dispatch({ type: "PLAY", value })}
                 />
                 <div className="qw-setting-info">
+                  <span>Device storage</span>
+                  <strong role="status">{saveLabel}</strong>
+                  <p>
+                    {storageStatus === "unavailable"
+                      ? "Device storage is unavailable. Changes and resets may not survive refresh; you can still use the temporary demo."
+                      : "Paper-trading state stays in this browser on this device. No account or cloud storage."}
+                  </p>
+                  {recovered && (
+                    <p role="status">
+                      The previous saved demo could not be restored. A clean
+                      paper-trading demo is ready.
+                    </p>
+                  )}
+                </div>
+                <div className="qw-setting-info">
                   <span>Currency</span>
                   <strong>Euro · EUR</strong>
                   <p>Clear outcomes, in money you understand.</p>
@@ -448,35 +477,54 @@ export default function Workspace() {
                 <div className="qw-reset">
                   <h3>Start with a clean slate</h3>
                   <p>
-                    Clear this session’s positions, activity, and simulated
-                    balances.
+                    Clear saved positions, activity, preferences, and simulated
+                    balances on this device.
                   </p>
                   {confirmReset ? (
-                    <div>
+                    <div
+                      id="reset-demo-confirmation"
+                      className="qw-reset-confirmation"
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") cancelReset();
+                      }}
+                      role="group"
+                      aria-labelledby="reset-confirmation-label"
+                    >
+                      <p id="reset-confirmation-label">
+                        Reset this device’s demo? Your saved trades, activity,
+                        and simulated balances will be cleared. This cannot be
+                        undone.
+                      </p>
                       <ActionButton
                         onClick={() => {
-                          dispatch({ type: "RESET" });
-                          setConfirmReset(false);
-                          setAsset("BTC");
+                          resetDemo();
+                          cancelReset();
                         }}
                       >
                         Reset demo
                       </ActionButton>
                       <button
                         type="button"
+                        id="keep-demo-button"
                         className="qw-text-button"
-                        onClick={() => setConfirmReset(false)}
+                        onClick={cancelReset}
                       >
-                        Keep this session
+                        Keep this demo
                       </button>
                     </div>
                   ) : (
                     <button
                       type="button"
+                      id="reset-demo-button"
                       className="qw-reset-button"
-                      onClick={() => setConfirmReset(true)}
+                      onClick={() => {
+                        setConfirmReset(true);
+                        window.requestAnimationFrame(() =>
+                          document.getElementById("keep-demo-button")?.focus(),
+                        );
+                      }}
                     >
-                      <RotateCcw size={14} /> Reset demo session
+                      <RotateCcw size={14} /> Reset demo
                     </button>
                   )}
                 </div>
@@ -490,7 +538,8 @@ export default function Workspace() {
                 </h2>
                 <p>
                   No accounts. No deposits. No bank details. Everything happens
-                  in this browser’s memory, and resets when you refresh.
+                  locally in this browser on this device. Refreshing keeps your
+                  paper-trading state; Reset demo clears it.
                 </p>
                 <p>
                   Targets and downside protection in a future live product would
@@ -504,7 +553,12 @@ export default function Workspace() {
             </div>
           )}
           <footer className="qw-workspace-footer">
-            <span>QuickExit · Interactive prototype</span>
+            <span>
+              QuickExit · Interactive prototype
+              <small className="qw-save-status" role="status">
+                {saveLabel}
+              </small>
+            </span>
             <p>
               Crypto involves financial risk. Capital is at risk; profits are
               not guaranteed. No live trading, custody, payments, or licensed
@@ -513,6 +567,30 @@ export default function Workspace() {
           </footer>
         </main>
       </div>
+      <nav className="qw-bottom-nav" aria-label="Mobile workspace navigation">
+        {navigation
+          .filter((item) => item.name !== "Home")
+          .map(({ name, icon: Icon }) => (
+            <button
+              type="button"
+              key={name}
+              aria-current={view === name ? "page" : undefined}
+              className={view === name ? "is-active" : ""}
+              onClick={() => navigate(name)}
+            >
+              <span className="qw-bottom-icon">
+                <Icon size={21} aria-hidden="true" />
+                {name === "Positions" && state.active && (
+                  <span className="qw-bottom-dot" />
+                )}
+                {name === "Cash Out" && state.cash > 0 && (
+                  <span className="qw-bottom-dot" />
+                )}
+              </span>
+              <span>{name === "Cash Out" ? "Cash Out" : name}</span>
+            </button>
+          ))}
+      </nav>
       <div
         className="sr-only"
         role="status"

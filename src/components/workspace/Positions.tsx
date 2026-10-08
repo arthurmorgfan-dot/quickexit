@@ -16,7 +16,7 @@ export default function Positions({
   onMonitor: () => void;
 }) {
   const rows = (positions: Position[]) => (
-    <div className="qw-table-scroll">
+    <div className="qw-table-scroll qw-desktop-positions">
       <table className="qw-positions-table">
         <caption className="sr-only">
           {positions[0]?.status === "active" ? "Active" : "Completed"} simulated
@@ -70,6 +70,59 @@ export default function Positions({
       </table>
     </div>
   );
+  const cards = (positions: Position[]) => (
+    <ul className="qw-mobile-positions">
+      {positions.map((p) => (
+        <li key={p.id}>
+          <div className="qw-mobile-position-top">
+            <span className="qw-table-asset">
+              <AssetMark asset={p.asset} />
+              <span>
+                {p.asset}
+                <small>
+                  {p.example
+                    ? "Example history"
+                    : p.status === "active"
+                      ? "Active position"
+                      : "This demo session"}
+                </small>
+              </span>
+            </span>
+            <span
+              className={`qw-mobile-position-profit ${p.profit >= 0 ? "qw-positive" : "qw-negative"}`}
+            >
+              {signedEuro(p.profit)}
+              <small>Profit / loss</small>
+            </span>
+          </div>
+          <dl>
+            <div>
+              <dt>Invested</dt>
+              <dd>{euro(p.amount)}</dd>
+            </div>
+            <div>
+              <dt>Profit target</dt>
+              <dd>{signedEuro(p.target)}</dd>
+            </div>
+          </dl>
+          {p.status === "active" ? (
+            <button
+              type="button"
+              className="qw-small-action"
+              onClick={onMonitor}
+            >
+              Monitor position ↗
+            </button>
+          ) : (
+            <span className="qw-status">
+              <CircleCheck size={14} />
+              {reasonLabel(p)}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <div className="qw-positions-view">
       <section className="qw-card">
@@ -78,7 +131,10 @@ export default function Positions({
           <span className="qw-count">{active ? 1 : 0}</span>
         </div>
         {active ? (
-          rows([active])
+          <>
+            {rows([active])}
+            {cards([active])}
+          </>
         ) : (
           <div className="qw-empty">
             <span>No open positions.</span>
@@ -99,6 +155,7 @@ export default function Positions({
           <span className="qw-count">{completed.length}</span>
         </div>
         {rows(completed)}
+        {cards(completed)}
         <p className="qw-micro">
           Example history is illustrative and excluded from your demo balance.
         </p>

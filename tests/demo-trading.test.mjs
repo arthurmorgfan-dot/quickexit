@@ -1,27 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import Module from "node:module";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
-
-const source = fileURLToPath(
-  new URL("../src/lib/demo-trading.ts", import.meta.url),
-);
-const compiled = ts.transpileModule(fs.readFileSync(source, "utf8"), {
-  compilerOptions: {
-    module: ts.ModuleKind.CommonJS,
-    target: ts.ScriptTarget.ES2020,
-  },
-}).outputText;
-const model = new Module(source);
-model._compile(compiled, source);
+import { loadTypeScript } from "./load-typescript.mjs";
 const {
   initialDemo,
   demoReducer: reduce,
   progress,
   currentPrice,
-} = model.exports;
+} = loadTypeScript("src/lib/demo-trading.ts");
 const buy = (overrides = {}) => ({
   type: "BUY",
   asset: "BTC",

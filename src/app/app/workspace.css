@@ -1933,3 +1933,15 @@
 .qw-activity-list p {
   font-size: 11px;
 }
+
+.qw-save-status {
+  display: block;
+  font-size: inherit;
+  font-weight: 400;
+  color: #9cb4a4;
+  margin-top: 4px;
+}
+.qw-reset-confirmation > p {
+  flex-basis: 100%;
+  margin-top: 0;
+}

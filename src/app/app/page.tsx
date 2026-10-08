@@ -1,6 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Workspace from "@/components/workspace/Workspace";
 import "./workspace.css";
+import "./mobile.css";
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#0b0e0d",
+};
 
 export const metadata: Metadata = {
   title: "QuickExit Workspace — Interactive Trading Demo",
