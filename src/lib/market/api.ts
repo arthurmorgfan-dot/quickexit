@@ -1,5 +1,5 @@
 import { ASSETS, type Asset } from "../demo-trading";
-import { TIMEFRAMES, type Timeframe } from "./models";
+import { TIMEFRAMES, SUPPORTED_INTERVALS, type Timeframe } from "./models";
 import { createMarketService, MarketFailure } from "./service";
 export function createMarketApi(
   market: ReturnType<typeof createMarketService>,
@@ -14,7 +14,7 @@ export function createMarketApi(
       !asset ||
       !Object.hasOwn(ASSETS, asset) ||
       !["quote", "stats", "history"].includes(kind ?? "") ||
-      (kind === "history" && !TIMEFRAMES.includes(timeframe as Timeframe))
+      (kind === "history" && !([...TIMEFRAMES, ...SUPPORTED_INTERVALS] as readonly string[]).includes(timeframe ?? ""))
     )
       return Response.json(
         { error: "Invalid market request" },

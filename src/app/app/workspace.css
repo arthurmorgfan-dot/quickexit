@@ -2339,3 +2339,21 @@
 @media (max-width: 700px) {
   .qe-workspace .qw-performance .qw-options { display: flex; flex-wrap: nowrap; }
 }
+
+/* v0.6 chart controls retain the market card's mobile-first proportions. */
+.qw-chart-indicators { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.qw-chart-indicators label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid #ffffff17; border-radius: 6px; color: #acbab1; font-size: 12px; cursor: pointer; }
+.qw-chart-indicators input { accent-color: #96edb9; width: 16px; height: 16px; }
+.qw-chart-toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+.qw-chart-axis-labels { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: #a6b4ad; padding-bottom: 10px; }
+.qw-chart-navigation { display: flex; gap: 8px; margin: 12px 0; }
+.qw-chart-navigation button { background: #ffffff02; border: 1px solid #ffffff17; border-radius: 6px; color: #acbab1; padding: 8px 14px; min-height: 44px; min-width: 44px; font-size: 12px; cursor: pointer; }
+.qw-chart-navigation button:disabled { opacity: .4; }
+.qw-chart-inspection { min-height: 42px; font-size: 12px; line-height: 1.7; color: #b8cbbf; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.qe-workspace .qw-interactive-chart > div[role="img"] { height: 320px; }
+@media (max-width: 700px) {
+  .qe-workspace .qw-chart-indicators input { min-height: 16px; }
+  .qe-workspace .qw-interactive-chart > div[role="img"] { height: 280px; }
+  .qe-workspace .qw-chart-toolbar > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .qe-workspace .qw-chart-toolbar > div[aria-label="Candle interval"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

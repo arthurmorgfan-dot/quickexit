@@ -1,113 +1,46 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Asset } from "@/lib/demo-trading";
-import { fetchMarket } from "@/lib/market/client";
-import {
-  normalizeStats,
-  normalizeCandles,
-  WINDOWS,
-  type Statistics,
-  type History,
-  type Timeframe,
-  type MarketResult,
-} from "@/lib/market/models";
-export default function useMarketIntelligence(
-  asset: Asset,
-  timeframe: Timeframe,
-  enabled: boolean,
-) {
-  const key = asset + timeframe;
+import { readIntelligence } from "@/lib/market/intelligence-reader";
+import { type Statistics, type History, type Timeframe, type MarketResult } from "@/lib/market/models";
+export default function useMarketIntelligence(asset: Asset, timeframe: Timeframe, enabled: boolean) {
+  const key = `${asset}:${timeframe}`;
   const [state, setState] = useState<{
-    key: string;
-    stats?: MarketResult<Statistics>;
-    history?: MarketResult<History>;
-    error: boolean;
-    loading: boolean;
-  }>({ key: "", error: false, loading: false });
+    key: string; stats?: MarketResult<Statistics>; history?: MarketResult<History>;
+    statsError: boolean; historyError: boolean; loading: boolean;
+  }>({ key: "", statsError: false, historyError: false, loading: false });
   useEffect(() => {
     if (!enabled) return;
-    let stopped = false;
+    let stopped = false, running = false;
     let timer: ReturnType<typeof setTimeout>;
     let controller: AbortController;
     const poll = async () => {
+      if (stopped || running) return;
+      clearTimeout(timer);
+      if (document.hidden) { timer = setTimeout(poll, 60000); return; }
+      running = true;
       controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
-      setState((previous) =>
-        previous.key === key
-          ? { ...previous, loading: true }
-          : { key, error: false, loading: true },
-      );
-      const results = await Promise.allSettled([
-        fetchMarket<Statistics>(asset, "stats", controller.signal),
-        fetchMarket<History>(asset, "history", controller.signal, timeframe),
+      setState(previous => previous.key === key ? { ...previous, loading: true } : { key, statsError: false, historyError: false, loading: true });
+      const [stats, history] = await Promise.allSettled([
+        readIntelligence<Statistics>(asset, "stats", controller.signal),
+        readIntelligence<History>(asset, "history", controller.signal, timeframe),
       ]);
       clearTimeout(timeout);
+      running = false;
       if (stopped) return;
-      setState((previous) => {
-        const next: typeof previous = {
-          ...(previous.key === key ? previous : { key }),
-          key,
-          error: false,
-          loading: false,
-        };
-        for (const [i, result] of results.entries()) {
-          try {
-            if (result.status !== "fulfilled") throw Error("Unavailable");
-            if (i === 0)
-              next.stats = {
-                ...result.value,
-                data: normalizeStats(result.value.data),
-              } as MarketResult<Statistics>;
-            else {
-              const r = result.value as MarketResult<History>,
-                h = r.data;
-              if (
-                h.asset !== asset ||
-                h.timeframe !== timeframe ||
-                h.granularity !== WINDOWS[timeframe].granularity ||
-                !Array.isArray(h.candles) ||
-                h.candles.length > 400 ||
-                !Number.isSafeInteger(h.gaps) ||
-                h.gaps < 0 ||
-                h.gaps > 400
-              )
-                throw Error("Invalid history");
-              const end = Math.floor(r.fetchedAt / 1000),
-                start =
-                  end -
-                  WINDOWS[timeframe].seconds -
-                  WINDOWS[timeframe].granularity;
-              // Validate individual provider-normalized bars; no interpolation or invented prices.
-              const candles = h.candles.flatMap((c) =>
-                normalizeCandles(
-                  [[c.time, c.low, c.high, c.open, c.close, c.volume]],
-                  start,
-                  end,
-                  h.granularity,
-                ),
-              );
-              if (
-                candles.some((c, i) => i > 0 && c.time <= candles[i - 1].time)
-              )
-                throw Error("Unsorted history");
-              next.history = { ...r, data: { ...h, candles } };
-            }
-          } catch {
-            next.error = true;
-          }
-        }
-        return next;
-      });
+      setState(previous => ({
+        ...(previous.key === key ? previous : { key }), key, loading: false,
+        ...(stats.status === "fulfilled" ? { stats: stats.value } : {}),
+        ...(history.status === "fulfilled" ? { history: history.value } : {}),
+        statsError: stats.status === "rejected", historyError: history.status === "rejected",
+      }));
       timer = setTimeout(poll, 60000);
     };
+    const visible = () => { if (!document.hidden) void poll(); };
+    document.addEventListener("visibilitychange", visible);
     void poll();
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-      controller?.abort();
-    };
+    return () => { stopped = true; clearTimeout(timer); controller?.abort(); document.removeEventListener("visibilitychange", visible); };
   }, [asset, timeframe, enabled, key]);
-  return state.key === key && enabled
-    ? state
-    : { key, error: false, loading: enabled };
+  return state.key === key && enabled ? { ...state, error: state.statsError || state.historyError } : { key, error: false, statsError: false, historyError: false, loading: enabled };
 }

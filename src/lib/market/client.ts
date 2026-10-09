@@ -4,6 +4,9 @@ import {
   type MarketQuote,
 } from "../market-data";
 import { type MarketResult, type Timeframe } from "./models";
+export class MarketRequestError extends Error {
+  constructor(public retryAfter: number) { super("Market data unavailable"); }
+}
 export async function fetchMarket<T>(
   asset: string,
   kind: string,
@@ -20,7 +23,11 @@ export async function fetchMarket<T>(
     credentials: "omit",
     cache: "no-store",
   });
-  if (!response.ok) throw Error("Market data unavailable");
+  if (!response.ok) {
+    const header = response.headers.get("Retry-After");
+    const seconds = header && !Number.isFinite(Number(header)) ? (Date.parse(header) - Date.now()) / 1000 : Number(header);
+    throw new MarketRequestError(Math.min(300, Math.max(1, Number.isFinite(seconds) && seconds > 0 ? seconds : 30)));
+  }
   const result = await response.json();
   if (
     !result ||

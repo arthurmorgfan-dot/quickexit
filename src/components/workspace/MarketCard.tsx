@@ -3,12 +3,14 @@ import MobileDisclosure from "./MobileDisclosure";
 import { ASSETS, priceEuro, type Asset } from "@/lib/demo-trading";
 import type { MarketQuote, MarketStatus } from "@/lib/market-data";
 import {
-  TIMEFRAMES,
+  INTERVALS,
+  CHART_TYPES,
+  historyTtl,
   dataStatus,
-  type Timeframe,
-  type ChartType,
+  type ChartInterval,
 } from "@/lib/market/models";
 import useMarketIntelligence from "./useMarketIntelligence";
+import useChartPreferences from "./useChartPreferences";
 import PriceChart from "./PriceChart";
 export function AssetMark({ asset }: { asset: Asset }) {
   return (
@@ -37,9 +39,9 @@ export default function MarketCard({
   quote?: MarketQuote;
   connection?: MarketStatus;
 }) {
-  const [timeframe, setTimeframe] = useState<Timeframe>("1D"),
-    [type, setType] = useState<ChartType>("line"),
-    [now, setNow] = useState(0);
+  const chartPreferences = useChartPreferences();
+  const { type, interval: timeframe, volume, sma20, sma50 } = chartPreferences.preferences;
+  const [now, setNow] = useState(0);
   useEffect(() => {
     const update = () => setNow(Date.now());
     const first = setTimeout(update, 0);
@@ -49,7 +51,7 @@ export default function MarketCard({
       clearInterval(timer);
     };
   }, []);
-  const data = useMarketIntelligence(asset, timeframe, live);
+  const data = useMarketIntelligence(asset, timeframe, live && chartPreferences.hydrated);
   const status = live
     ? now
       ? dataStatus(quote, connection === "unavailable", now)
@@ -59,8 +61,12 @@ export default function MarketCard({
     history = data.history?.data;
   const statsStale =
     data.stats?.stale ||
-    data.error ||
+    data.statsError ||
     (!!data.stats && now - data.stats.fetchedAt > 120000);
+  const historyDelayed = !!history && !!now && (
+    now / 1000 - (history.candles.at(-1)?.time ?? 0) > history.granularity + 120 ||
+    (!!data.history && now - data.history.fetchedAt > historyTtl(timeframe))
+  );
   return (
     <section className="qw-card qw-market" aria-label="Asset market overview">
       <div className="qw-card-heading">
@@ -125,32 +131,39 @@ export default function MarketCard({
       >
         <div className="qw-chart-toolbar">
           <div role="group" aria-label="Chart type">
-            {(["line", "candles"] as const).map((t) => (
+            {CHART_TYPES.map((t) => (
               <button
                 key={t}
                 type="button"
                 aria-pressed={type === t}
                 className={type === t ? "is-selected" : ""}
-                onClick={() => setType(t)}
+                onClick={() => chartPreferences.update({ type: t })}
               >
-                {t === "line" ? "Line" : "Candles"}
+                {{ line: "Line", candles: "Candles", area: "Area", bars: "OHLC" }[t]}
               </button>
             ))}
           </div>
-          <div role="group" aria-label="Chart timeframe">
-            {TIMEFRAMES.map((t) => (
+          <div role="group" aria-label="Candle interval">
+            {INTERVALS.map((t) => (
               <button
                 key={t}
                 type="button"
+                disabled={t === "4h"}
+                title={t === "4h" ? "Coinbase Exchange does not provide native 4-hour candles" : `Observed ${t} candles`}
                 aria-pressed={timeframe === t}
                 className={timeframe === t ? "is-selected" : ""}
-                onClick={() => setTimeframe(t)}
+                onClick={() => chartPreferences.update({ interval: t as ChartInterval })}
               >
                 {t}
               </button>
             ))}
           </div>
         </div>
+        <p className="qw-micro">Candle interval · up to 240 observations. 4h unsupported by Coinbase Exchange; no substitute interval is used.</p>
+        <div className="qw-chart-indicators" role="group" aria-label="Chart indicators">
+          {(["volume", "sma20", "sma50"] as const).map(key => <label key={key}><input type="checkbox" checked={chartPreferences.preferences[key]} onChange={e => chartPreferences.update({ [key]: e.target.checked })} />{{ volume: "Volume", sma20: "SMA 20", sma50: "SMA 50" }[key]}</label>)}
+        </div>
+        {!chartPreferences.saved && <p className="qw-micro" role="status">Chart preferences cannot be saved on this device. Your current choices remain usable.</p>}
         {!live ? (
           <div className="qw-history-empty">
             Market charts use real observations.
@@ -161,14 +174,16 @@ export default function MarketCard({
           </div>
         ) : history?.candles.length ? (
           <>
-            <PriceChart candles={history.candles} type={type} />
+            <PriceChart key={`${asset}:${timeframe}`} candles={history.candles} type={type} granularity={history.granularity} volume={volume} sma20={sma20} sma50={sma50} asset={asset} />
             <p className="qw-micro" role="status">
-              {data.history?.stale || data.error
+              {data.history?.stale || data.historyError
                 ? "Last known history · refresh unavailable"
                 : data.loading
                   ? "Refreshing history…"
-                  : "Observed OHLCV"}{" "}
-              · {history.granularity / 60}-minute candles
+                  : historyDelayed ? "History delayed · last observed data" : "Observed OHLCV"}{" "}
+              · {timeframe} candles · latest bucket may still be forming
+              · latest observed bucket {new Date(history.candles.at(-1)!.time * 1000).toLocaleString("en-GB", { timeZone: "UTC" })} UTC
+              · fetched {new Date(data.history!.fetchedAt).toLocaleTimeString()}
               {history.gaps > 0 ? ` · ${history.gaps} missing intervals` : ""}.
               Empty intervals are not filled.
             </p>
@@ -177,7 +192,7 @@ export default function MarketCard({
           <div className="qw-history-empty" role="status">
             {data.loading
               ? "Loading market history…"
-              : "History unavailable for this range."}
+              : "History unavailable for this interval. Retrying automatically."}
             <small>No substitute prices are generated.</small>
           </div>
         )}

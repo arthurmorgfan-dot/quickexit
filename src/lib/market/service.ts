@@ -5,6 +5,7 @@ import {
   normalizeStats,
   normalizeCandles,
   WINDOWS,
+  historyTtl,
   type Timeframe,
   type MarketResult,
   type Statistics,
@@ -113,7 +114,7 @@ export function createExchangeProvider(
         0,
         Math.floor(seconds / granularity) + 1 - values.length,
       );
-      return { asset, timeframe, candles: values, granularity, gaps };
+      return { asset, timeframe, candles: values, granularity, gaps, start, end };
     },
   };
 }
@@ -184,7 +185,7 @@ export function createMarketService(
     history: (asset: Asset, t: Timeframe) =>
       load(
         "history:" + asset + ":" + t,
-        t === "1H" || t === "4H" ? 60000 : 300000,
+        historyTtl(t),
         86400000,
         () => provider.history(asset, t),
       ),
