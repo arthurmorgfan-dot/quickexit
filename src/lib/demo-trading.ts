@@ -16,7 +16,7 @@ export const ASSETS = {
 } as const;
 export type Asset = keyof typeof ASSETS;
 export type View =
-  "Home" | "Trade" | "Positions" | "Activity" | "Cash Out" | "Settings";
+  "Markets" | "Home" | "Trade" | "Positions" | "Activity" | "Cash Out" | "Settings";
 export type ExitReason = "target" | "protection" | "manual";
 export type Position = {
   id: number;
@@ -41,6 +41,7 @@ export type ActivityEvent = {
   kind: "buy" | "target" | "sell" | "bank" | "info";
 };
 export type DemoState = {
+  journal?: Record<string, string>;
   active: Position | null;
   completed: Position[];
   cash: number;
@@ -161,6 +162,7 @@ export type DemoAction = (
     }
   | { type: "MOVE"; mode: "rise" | "fall" | "target" | "tick" }
   | { type: "MARKET_PRICE"; price: number }
+  | { type: "JOURNAL"; tradeId: number; note: string }
   | { type: "SELL" }
   | { type: "EDIT_TARGET"; target: number; live?: boolean }
   | { type: "TRANSFER" }
@@ -288,6 +290,13 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
   if (action.positionId !== undefined && action.positionId !== state.active?.id)
     return state;
   switch (action.type) {
+    case "JOURNAL": {
+      if (typeof action.note !== "string" || action.note.length > 2000 || !state.completed.some(p => p.id === action.tradeId && !p.example)) return state;
+      const journal = { ...state.journal };
+      if (action.note.trim()) journal[String(action.tradeId)] = action.note;
+      else delete journal[String(action.tradeId)];
+      return { ...state, journal };
+    }
     case "BUY": {
       if (
         state.active ||

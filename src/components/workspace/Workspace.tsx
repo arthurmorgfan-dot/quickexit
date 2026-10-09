@@ -34,8 +34,11 @@ import CashOut from "./CashOut";
 import Positions from "./Positions";
 import MobileDisclosure from "./MobileDisclosure";
 import usePersistentDemo from "./usePersistentDemo";
+import Markets from "./Markets";
+import Performance from "./Performance";
 import AccountPanel from "./AccountPanel";
 const navigation = [
+  { name: "Markets", icon: House },
   { name: "Home", icon: House },
   { name: "Trade", icon: ChartNoAxesCombined },
   { name: "Positions", icon: Layers },
@@ -44,6 +47,7 @@ const navigation = [
   { name: "Settings", icon: Settings },
 ] as const;
 const descriptions: Record<View, string> = {
+  Markets: "Real cryptocurrencies. Your next paper trade.",
   Home: "A clear view of your next move.",
   Trade: "Enter with a plan. Leave with a purpose.",
   Positions: "Your money, from entry to exit.",
@@ -71,7 +75,14 @@ export default function Workspace() {
     checkingAuth,
   } = workspace;
   const portfolio = portfolioSummary(state);
-  const [view, setView] = useState<View>("Trade"),
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const first = setTimeout(update, 0);
+    const timer = setInterval(update, 5000);
+    return () => { clearTimeout(first); clearInterval(timer); };
+  }, []);
+  const [view, setView] = useState<View>("Markets"),
     [confirmReset, setConfirmReset] = useState(false);
   const saveLabel = checkingAuth
     ? "Checking account…"
@@ -162,7 +173,7 @@ export default function Workspace() {
   const selectedAsset = state.active?.asset ?? asset;
   const live = market.mode === "live";
   const quote = market.quotes[selectedAsset];
-  const usableQuote = !!quote && freshQuote(quote);
+  const usableQuote = !!quote && now > 0 && freshQuote(quote, now);
   const marketLabel = live ? "Live market prices" : "Demo prices";
   const marketMessage = !live
     ? "Deterministic demo controls enabled."
@@ -262,6 +273,7 @@ export default function Workspace() {
                 Sign in
               </Link>
             )}
+            <button type="button" className="qw-text-button" aria-label="Workspace settings" onClick={() => navigate("Settings")}><Settings size={18} /></button>
             <span
               className="qw-avatar"
               aria-label={account ? "Paper account" : "Demo profile"}
@@ -289,6 +301,8 @@ export default function Workspace() {
                       ? "Send it home."
                       : view === "Positions"
                         ? "Every trade has a purpose."
+                        : view === "Markets"
+                          ? "Find your next move."
                         : view === "Activity"
                           ? "Your story, trade by trade."
                           : "Keep it simple."}
@@ -311,7 +325,7 @@ export default function Workspace() {
             </p>
           </div>
           <p className="qw-market-status" role="status">
-            <strong>{marketLabel}</strong> · {marketMessage}
+            {view === "Markets" ? "Real market prices · your trading balances and executions remain simulated." : <><strong>{marketLabel}</strong> · {marketMessage}</>}
           </p>
           {(view === "Trade" || view === "Home") && (
             <section
@@ -322,14 +336,18 @@ export default function Workspace() {
                 ["Available virtual cash", euro(portfolio.cash)],
                 ["Invested", euro(portfolio.invested)],
                 ["Portfolio value", euro(portfolio.value)],
-                ["Net P&L", signedEuro(portfolio.netProfit)],
+                ["Realized net P&L", signedEuro(portfolio.realized)],
+                ["Unrealized net P&L", signedEuro(portfolio.unrealized)],
+                ["Transferred out", euro(state.sent)],
               ].map(([label, value]) => (
                 <div className="qw-card qw-stat" key={label}>
                   <span>{label}</span>
                   <strong>{value}</strong>
                   <small>
-                    {label === "Net P&L"
-                      ? `${signedEuro(portfolio.realized)} realized · ${signedEuro(portfolio.unrealized)} unrealized`
+                    {label === "Unrealized net P&L"
+                      ? !state.active ? "No active position" : live ? usableQuote ? "Fresh market valuation · estimated exit costs" : "Last observed valuation · quote unavailable or stale" : "Demo valuation · estimated exit costs"
+                      : label === "Realized net P&L" ? "Completed paper trades · after costs"
+                      : label === "Transferred out" ? "Simulated transfers · excluded from portfolio value"
                       : label === "Portfolio value"
                         ? "Estimated after trading costs"
                         : "Simulated EUR"}
@@ -345,6 +363,7 @@ export default function Workspace() {
             </p>
           )}
           <AccountPanel workspace={workspace} compact />
+          {view === "Markets" && <Markets activeAsset={state.active?.asset ?? null} disabled={!ready} onSelect={next => { setAsset(next); if (!state.active) { dispatch({ type: "NEW_TRADE" }); setMarketMode("live"); } navigate("Trade"); }} />}
           {view === "Trade" && (
             <>
               <div className="qw-paper-controls" inert={!ready}>
@@ -450,6 +469,8 @@ export default function Workspace() {
           )}
           {view === "Home" && (
             <>
+              <Performance state={state} />
+              <p className="qw-market-status">{live ? quote ? `Selected market quote: ${new Date(quote.updatedAt).toLocaleString()} · ${usableQuote && marketStatus === "connected" ? "Fresh" : "Stale or unavailable — last observed valuation"}` : "Waiting for a verified market quote." : "Demo valuation · deterministic simulated prices"}</p>
               <section className="qw-card qw-home-next">
                 <div>
                   <span className="qw-overline">YOUR NEXT MOVE</span>
@@ -471,9 +492,11 @@ export default function Workspace() {
                 <ActionButton
                   onClick={() =>
                     navigate(
-                      state.lastClosed && state.cash > 0 && !state.active
-                        ? "Cash Out"
-                        : "Trade",
+                      state.active
+                        ? "Trade"
+                        : state.lastClosed && state.cash > 0
+                          ? "Cash Out"
+                          : "Markets",
                     )
                   }
                 >
@@ -497,6 +520,9 @@ export default function Workspace() {
             <Positions
               active={state.active}
               completed={state.completed}
+              journal={state.journal ?? {}}
+              onNote={(tradeId, note) => dispatch({ type: "JOURNAL", tradeId, note })}
+              disabled={!ready}
               onMonitor={() => navigate("Trade")}
             />
           )}
@@ -561,7 +587,7 @@ export default function Workspace() {
                       Live uses public EUR market quotes from Coinbase. Demo
                       enables predictable outcomes. Switching keeps your entry
                       price fixed; returning to Live may trigger a paper exit at
-                      the next market update. Charts remain illustrative. No
+                      the next market update. Market charts show verified exchange history only. No
                       real trades or funds.
                     </p>
                   </div>
@@ -731,7 +757,7 @@ export default function Workspace() {
       </div>
       <nav className="qw-bottom-nav" aria-label="Mobile workspace navigation">
         {navigation
-          .filter((item) => item.name !== "Home")
+          .filter((item) => item.name !== "Activity" && item.name !== "Settings")
           .map(({ name, icon: Icon }) => (
             <button
               type="button"

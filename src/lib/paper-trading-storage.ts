@@ -299,11 +299,20 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
       : null;
     if ((s.lastClosed !== null && !lastClosed) || (active && lastClosed))
       return null;
+    const journal: Record<string, string> = {};
+    if (s.journal !== undefined) {
+      if (!record(s.journal) || Object.keys(s.journal).length > MAX_HISTORY) return null;
+      for (const [id, note] of Object.entries(s.journal)) {
+        if (!realCompleted.some(p => String(p.id) === id) || typeof note !== "string" || note.length > 2000) return null;
+        journal[id] = note;
+      }
+    }
     const maxId = Math.max(0, ...ids, ...validEvents.map((e) => e.id));
     return {
       asset: data.selectedAsset,
       market,
       state: {
+        ...(Object.keys(journal).length ? { journal } : {}),
         active,
         completed: [...realCompleted, ...examples],
         events: validEvents,
@@ -327,6 +336,7 @@ export function decodePaperTrading(raw: string): PaperTrading | null {
 
 export function encodePaperTrading(snapshot: PaperTrading): string {
   const {
+    journal,
     active,
     completed,
     cash,
@@ -345,6 +355,7 @@ export function encodePaperTrading(snapshot: PaperTrading): string {
     selectedAsset: snapshot.asset,
     market: snapshot.market ?? initialMarket(),
     state: {
+      ...(journal && Object.keys(journal).length ? { journal } : {}),
       active,
       completed,
       cash,

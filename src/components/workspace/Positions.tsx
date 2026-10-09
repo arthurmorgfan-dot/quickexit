@@ -1,3 +1,4 @@
+import TradeJournal from "./TradeJournal";
 import { useState } from "react";
 import TradeReceipt, { tradeDate, receiptReason } from "./TradeReceipt";
 import { CircleCheck } from "lucide-react";
@@ -7,10 +8,14 @@ export default function Positions({
   active,
   completed,
   onMonitor,
+  journal, onNote, disabled,
 }: {
   active: Position | null;
   completed: Position[];
   onMonitor: () => void;
+  journal: Record<string, string>;
+  onNote: (id: number, note: string) => void;
+  disabled: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = completed.find((p) => p.id === selectedId);
@@ -53,6 +58,7 @@ export default function Positions({
           ← Back to completed trades
         </button>
         <TradeReceipt position={selected} focus />
+        {!selected.example && <TradeJournal key={selected.id} note={journal[String(selected.id)] ?? ""} onSave={note => onNote(selected.id, note)} disabled={disabled} />}
       </section>
     );
   const rows = (positions: Position[]) => (

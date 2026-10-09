@@ -724,3 +724,26 @@ test("recovering an invalid account cache retains earlier recovery copies", asyn
   assert.equal(f.commits(), 0);
   s.dispose();
 });
+
+test("trade notes sync in the compatible v3 aggregate, preserve receipts, and stay account scoped", async () => {
+  const f = setup(), s = f.fresh();
+  await s.setAccount(A);
+  s.dispatch(buy);
+  s.dispatch({ type: "SELL" });
+  const trade = s.getSnapshot().state.completed.find(p => !p.example);
+  const receipt = JSON.stringify(trade);
+  s.dispatch({ type: "JOURNAL", tradeId: trade.id, note: "Follow the exit plan." });
+  await settle();
+  const payload = JSON.parse(f.row(A.id).raw);
+  assert.equal(payload.version, 3);
+  assert.equal(payload.state.journal[trade.id], "Follow the exit plan.");
+  const next = f.fresh();
+  await next.setAccount(A);
+  assert.equal(next.getSnapshot().state.journal[trade.id], "Follow the exit plan.");
+  assert.deepEqual(next.getSnapshot().state.completed.find(p => p.id === trade.id), JSON.parse(receipt));
+  const pending = next.scopedDispatch(A.id);
+  await next.setAccount(B);
+  pending({ type: "JOURNAL", tradeId: trade.id, note: "Wrong account" });
+  assert.equal(next.getSnapshot().state.journal, undefined);
+  s.dispose(); next.dispose();
+});

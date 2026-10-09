@@ -2307,3 +2307,35 @@
     margin: 10px 0;
   }
 }
+
+.qw-market-search { display: grid; gap: 10px; margin: 24px 0; font-size: 13px; color: #a0b3a6; }
+.qw-market-search input, .qw-journal textarea { width: 100%; min-width: 0; border: 1px solid #96edb930; border-radius: 8px; background: #0b100d; color: #eef5ef; padding: 14px; font: inherit; }
+.qw-market-list { list-style: none; padding: 0; margin: 0; }
+.qw-market-list li + li { border-top: 1px solid #96edb91a; }
+.qw-market-list button { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; width: 100%; gap: 16px; padding: 20px 0; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.qw-market-list button:hover { background: #96edb908; }
+.qw-market-list small { display: block; margin-top: 6px; color: #a0b3a6; font-size: 11px; }
+.qw-market-row-price, .qw-market-row-status { text-align: right; }
+.qw-performance { margin-bottom: 20px; }
+.qw-performance-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 24px 0 32px; }
+.qw-performance-metrics dt { font-size: 12px; color: #a0b3a6; }
+.qw-performance-metrics dd { margin: 10px 0 0; font-size: 21px; }
+.qw-performance-chart { width: 100%; display: block; }
+.qw-chart-dates, .qw-journal > div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #a0b3a6; margin-bottom: 18px; }
+.qw-performance details { font-size: 12px; margin: 20px 0; }
+.qw-journal { border-top: 1px solid #96edb922; margin-top: 24px; padding-top: 24px; display: grid; gap: 14px; }
+.qw-journal small { display: block; margin-top: 8px; font-size: 12px; color: #a0b3a6; }
+.qw-journal textarea { resize: vertical; }
+@media (max-width: 700px) {
+  .qw-market-list button { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qw-market-row-status { grid-column: 1 / -1; text-align: left; display: flex; gap: 10px; align-items: baseline; }
+  .qw-performance-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px; }
+  .qw-performance .qw-card-heading, .qw-markets .qw-card-heading { flex-wrap: wrap; gap: 14px; }
+  .qe-workspace:has(textarea:focus) .qw-bottom-nav { display: none; }
+}
+@media (min-width: 901px) {
+  .qw-portfolio-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .qe-workspace .qw-performance .qw-options { display: flex; flex-wrap: nowrap; }
+}
