@@ -2357,3 +2357,16 @@
   .qe-workspace .qw-chart-toolbar > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .qe-workspace .qw-chart-toolbar > div[aria-label="Candle interval"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* Private beta help stays inline, with no modal or extra navigation. */
+.qw-introduction { margin-bottom: 20px; }
+.qw-introduction p, .qw-beta-feedback p { color: var(--qw-muted, #a6b4ad); line-height: 1.65; }
+.qw-introduction ol { padding-left: 22px; line-height: 1.7; }
+.qw-introduction li + li { margin-top: 8px; }
+.qw-beta-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.qw-beta-feedback { margin: 20px 0; min-width: 0; }
+.qw-beta-feedback form { display: grid; gap: 12px; }
+.qw-beta-feedback textarea, .qw-beta-feedback select { width: 100%; min-width: 0; box-sizing: border-box; padding: 12px; border: 1px solid #ffffff20; border-radius: 8px; background: #111715; color: #eef5f0; font: inherit; }
+.qw-beta-feedback textarea { resize: vertical; }
+.qw-beta-feedback button, .qw-beta-actions button { min-height: 44px; }
+.qw-beta-feedback :focus-visible, .qw-introduction :focus-visible { outline: 2px solid #96edb9; outline-offset: 4px; }

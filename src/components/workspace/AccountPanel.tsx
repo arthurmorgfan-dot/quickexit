@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { supabaseSetup } from "@/lib/supabase/config";
 import type usePersistentDemo from "./usePersistentDemo";
 type Workspace = ReturnType<typeof usePersistentDemo>;
 export default function AccountPanel({
@@ -9,6 +10,7 @@ export default function AccountPanel({
   compact?: boolean;
 }) {
   const active = w.account;
+  const enabled = supabaseSetup().status === "ready";
   if (
     compact &&
     !w.authError &&
@@ -43,7 +45,7 @@ export default function AccountPanel({
             w.syncMessage ||
             (active
               ? "Your account stores paper trades only."
-              : "Use the demo without registering, or sign in to save paper trading across devices.")}
+              : enabled ? "Use the demo without registering, or sign in to save paper trading across devices." : "Demo mode · saved on this device. Hosted accounts and registration remain disabled while verification is completed.")}
         </p>
       </div>
       <div className="qw-account-actions">
@@ -126,7 +128,7 @@ export default function AccountPanel({
             >
               Sign out
             </button>
-          ) : (
+          ) : enabled ? (
             <>
               <Link className="qw-text-button" href="/signin">
                 Sign in
@@ -135,13 +137,13 @@ export default function AccountPanel({
                 Create account
               </Link>
             </>
-          ))}
+          ) : null)}
         {(compact || active) && (
           <Link className="qw-text-button" href="/app?demo=1">
             Try Demo
           </Link>
         )}
-        {!compact && !active && (
+        {!compact && !active && enabled && (
           <Link className="qw-text-button" href="/app">
             Open account workspace
           </Link>

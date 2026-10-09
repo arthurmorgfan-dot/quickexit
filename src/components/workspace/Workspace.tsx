@@ -37,6 +37,8 @@ import usePersistentDemo from "./usePersistentDemo";
 import Markets from "./Markets";
 import Performance from "./Performance";
 import AccountPanel from "./AccountPanel";
+import { Introduction, BetaFeedback, OfflineNotice } from "./BetaExperience";
+import { supabaseSetup } from "@/lib/supabase/config";
 const navigation = [
   { name: "Markets", icon: House },
   { name: "Home", icon: House },
@@ -269,8 +271,8 @@ export default function Workspace() {
                 <span className="qw-account-mobile">Account</span>
               </button>
             ) : (
-              <Link href="/signin" className="qw-account-link">
-                Sign in
+              <Link href={supabaseSetup().status === "ready" ? "/signin" : "/app?demo=1"} className="qw-account-link">
+                {supabaseSetup().status === "ready" ? "Sign in" : "Demo mode"}
               </Link>
             )}
             <button type="button" className="qw-text-button" aria-label="Workspace settings" onClick={() => navigate("Settings")}><Settings size={18} /></button>
@@ -317,6 +319,8 @@ export default function Workspace() {
               </button>
             </div>
           </div>
+          {view === "Markets" && <Introduction onMarkets={() => navigate("Markets")} />}
+          <OfflineNotice />
           <div className="qw-prototype-notice">
             <FlaskConical size={15} />
             <p>
@@ -563,6 +567,8 @@ export default function Workspace() {
                   </span>
                 </div>
                 <AccountPanel workspace={workspace} />
+                <Introduction always onMarkets={() => navigate("Markets")} />
+                <BetaFeedback />
                 <div className="qw-paper-controls" inert={!ready}>
                   <div className="qw-setting-info">
                     <span id="market-data-label">Market data</span>
@@ -607,7 +613,7 @@ export default function Workspace() {
                         ? "Device storage is unavailable. Changes and resets may not survive refresh; you can still use the temporary demo."
                         : account
                           ? "Paper state is cached on this device and synced to your account. No real funds or banking details."
-                          : "Demo paper state stays in this browser. Sign in to save across devices."}
+                          : "Demo paper state stays in this browser. Hosted accounts are not available in this beta until verification is complete."}
                     </p>
                     {recovered && (
                       <p role="status">
@@ -653,7 +659,7 @@ export default function Workspace() {
                   <div className="qw-reset">
                     <h3>Start with a clean slate</h3>
                     <p>
-                      Clear saved positions, activity, preferences, and
+                      Clear saved positions, receipts, journal notes, activity, paper preferences, and
                       simulated balances{" "}
                       {account
                         ? "in this account, across synced devices"
@@ -675,7 +681,7 @@ export default function Workspace() {
                           {account
                             ? "this account’s paper workspace"
                             : "this device’s demo"}
-                          ? Your saved trades, activity, and simulated balances
+                          ? Your saved trades, receipts, journal notes, activity, and simulated balances
                           will be cleared and virtual cash restored to €10,000.
                           This cannot be undone.
                         </p>
