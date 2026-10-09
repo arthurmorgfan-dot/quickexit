@@ -747,3 +747,35 @@ test("trade notes sync in the compatible v3 aggregate, preserve receipts, and st
   assert.equal(next.getSnapshot().state.journal, undefined);
   s.dispose(); next.dispose();
 });
+
+test("import review is captured, does not mutate the guest and cannot silently import newer unrelated device progress", async () => {
+  const f = setup();
+  const guest = f.fresh();
+  guest.dispatch(buy);
+  guest.dispatch({ type: "SELL" });
+  const trade = guest.getSnapshot().state.lastClosed;
+  guest.dispatch({ type: "JOURNAL", tradeId: trade.id, note: "Original demo note." });
+  const original = f.storage.getItem(KEY);
+  const s = f.fresh();
+  await s.setAccount(A);
+  assert.equal(s.getSnapshot().syncStatus, "import");
+  assert.equal(s.getSnapshot().importPreview.completed, 1);
+  assert.equal(s.getSnapshot().importPreview.receipts, 1);
+  assert.equal(s.getSnapshot().importPreview.notes, 1);
+  assert.equal(f.commits(), 0);
+  assert.equal(f.storage.getItem(KEY), original);
+  // Another guest tab changes its own portfolio after the review was captured.
+  guest.dispatch({ type: "NEW_TRADE" });
+  guest.dispatch({ ...buy, asset: "ETH", requestId: "separate-guest-progress" });
+  const newerGuest = f.storage.getItem(KEY);
+  const preview = s.getSnapshot().importPreview;
+  await s.chooseImport(true);
+  assert.equal(s.getSnapshot().state.active, null);
+  assert.equal(s.getSnapshot().state.cash, preview.cash);
+  assert.equal(s.getSnapshot().state.journal[trade.id], "Original demo note.");
+  assert.equal(f.storage.getItem(KEY), newerGuest);
+  assert.equal(s.getSnapshot().importPreview, null);
+  await s.chooseImport(true);
+  assert.equal(f.commits(), 1);
+  s.dispose(); guest.dispose();
+});

@@ -117,6 +117,7 @@ test("signup waits for email confirmation while login requires an actual session
         "dev@example.test",
         password,
         "http://localhost:3000",
+        true,
       )
     ).status,
     "confirmation",
@@ -129,6 +130,7 @@ test("signup waits for email confirmation while login requires an actual session
         "dev@example.test",
         password,
         "http://localhost:3000",
+        true,
       )
     ).status,
     "error",
@@ -142,6 +144,7 @@ test("signup waits for email confirmation while login requires an actual session
         "dev@example.test",
         password,
         "http://localhost:3000",
+        true,
       )
     ).status,
     "signed_in",
@@ -152,6 +155,7 @@ test("signup waits for email confirmation while login requires an actual session
     " dev@example.test ",
     password,
     "http://localhost:3000",
+    true,
   );
   assert.equal(
     good.calls[1][1].options.emailRedirectTo,
@@ -171,13 +175,16 @@ test("auth provider rejection and network failure never become successful sign-i
         throw Error("private_provider_details");
       },
     ]) {
+      let called = 0;
       const result = await authenticate(
-        client({ [method]: fn }),
+        client({ [method]: async (...args) => { called++; return fn(...args); } }),
         method === "signUp" ? "signup" : "signin",
         "dev@example.test",
         password,
         "http://localhost:3000",
+        true,
       );
+      assert.equal(called, 1);
       assert.equal(result.status, "error");
       assert.ok(!result.message.includes("private_provider_details"));
     }
@@ -190,6 +197,7 @@ test("auth provider rejection and network failure never become successful sign-i
         "dev@example.test",
         password,
         "http://localhost:3000",
+        true,
       )
     ).status,
     "error",

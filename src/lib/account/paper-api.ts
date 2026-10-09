@@ -4,7 +4,7 @@ import {
   parseCloudCommand,
   readCloudBody,
 } from "@/lib/account/request-validation";
-import type { CloudRecord } from "@/lib/account/cloud-api";
+import { decodeCloudReply, type CloudRecord } from "@/lib/account/cloud-api";
 const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
 const reply = (data: unknown, status = 200) =>
   Response.json(data, { status, headers });
@@ -100,10 +100,10 @@ export function createPaperApi(
         },
       );
       if (error) return reply({ error: "Unable to save paper state." }, 503);
-      return reply({
+      return reply(decodeCloudReply({
         ...result,
         record: record(result.record, verified.user!.id),
-      });
+      }, verified.user!.id));
     } catch {
       return reply({ error: "Unable to save paper state." }, 503);
     }

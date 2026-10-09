@@ -38,6 +38,7 @@ import Markets from "./Markets";
 import Performance from "./Performance";
 import AccountPanel from "./AccountPanel";
 import { Introduction, BetaFeedback, OfflineNotice } from "./BetaExperience";
+import { buildInfo } from "@/lib/build-info";
 import { supabaseSetup } from "@/lib/supabase/config";
 const navigation = [
   { name: "Markets", icon: House },
@@ -366,7 +367,7 @@ export default function Workspace() {
               starts a fresh €10,000 portfolio.
             </p>
           )}
-          <AccountPanel workspace={workspace} compact />
+          {view !== "Settings" && <AccountPanel workspace={workspace} compact />}
           {view === "Markets" && <Markets activeAsset={state.active?.asset ?? null} disabled={!ready} onSelect={next => { setAsset(next); if (!state.active) { dispatch({ type: "NEW_TRADE" }); setMarketMode("live"); } navigate("Trade"); }} />}
           {view === "Trade" && (
             <>
@@ -748,7 +749,8 @@ export default function Workspace() {
           )}
           <footer className="qw-workspace-footer">
             <span>
-              QuickExit · Interactive prototype
+              QuickExit · Paper trading beta
+              <small className="qw-build-label">Build {buildInfo().identifier}</small>
               <small className="qw-save-status" role="status">
                 {saveLabel}
               </small>

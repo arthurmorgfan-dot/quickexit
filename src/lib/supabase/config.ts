@@ -63,3 +63,8 @@ export function supabaseSetup() {
     return { status: "invalid", config: null } as const;
   }
 }
+
+/** Accounts and public signup are deliberately separate release gates. */
+export function registrationEnabled() {
+  return supabaseSetup().status === "ready" && process.env.NEXT_PUBLIC_QUICKEXIT_REGISTRATION_ENABLED === "true";
+}

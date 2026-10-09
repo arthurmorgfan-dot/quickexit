@@ -56,6 +56,19 @@ export function decodeCloudRecord(value: unknown, userId: string): CloudRecord {
     raw: encodePaperTrading(restored),
   };
 }
+/** Validate acknowledgements before a retry journal can be cleared. */
+export function decodeCloudReply(value: unknown, userId: string): CloudReply {
+  if (!value || typeof value !== "object") throw Error("Invalid cloud response");
+  const reply = value as CloudReply;
+  if (!["saved", "duplicate", "conflict", "import_unavailable"].includes(reply.status)) throw Error("Invalid cloud response");
+  const record = decodeCloudRecord(reply.record, userId);
+  if (["saved", "duplicate"].includes(reply.status) && (
+    !Number.isSafeInteger(reply.committedRevision) || reply.committedRevision! < 1 ||
+    reply.committedRevision! > record.revision || !record.raw ||
+    (reply.status === "saved" && reply.committedRevision !== record.revision)
+  )) throw Error("Invalid cloud acknowledgement");
+  return { status: reply.status, record, ...(reply.committedRevision === undefined ? {} : { committedRevision: reply.committedRevision }) };
+}
 export class CloudTransportError extends Error {
   constructor(
     public readonly kind: "auth" | "network",
@@ -91,18 +104,12 @@ export function browserCloudTransport(
     load: async (userId, signal) =>
       decodeCloudRecord(await send("GET", signal), userId),
     commit: async (userId, command, signal) => {
-      const reply = (await send("POST", signal, {
+      const reply = await send("POST", signal, {
         ...command,
         payload: JSON.parse(command.raw),
         raw: undefined,
-      })) as CloudReply;
-      if (
-        !["saved", "duplicate", "conflict", "import_unavailable"].includes(
-          reply.status,
-        )
-      )
-        throw Error("Invalid cloud response");
-      return { ...reply, record: decodeCloudRecord(reply.record, userId) };
+      });
+      return decodeCloudReply(reply, userId);
     },
   };
 }

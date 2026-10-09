@@ -1,3 +1,4 @@
+import { registrationEnabled } from "../supabase/config";
 import type { SupabaseClient } from "@supabase/supabase-js";
 export type AuthClient = Pick<SupabaseClient, "auth">;
 export type AuthOutcome = {
@@ -14,7 +15,9 @@ export async function authenticate(
   email: string,
   password: string,
   origin: string,
+  allowSignup = registrationEnabled(),
 ): Promise<AuthOutcome> {
+  if (mode === "signup" && !allowSignup) return { status: "error", message: "Public registration is closed. Invited testers can sign in, or continue with Try Demo." };
   if (!client) return { status: "error", message: unavailable };
   if (!email.trim() || (mode === "signup" && !validPassword(password)))
     return {

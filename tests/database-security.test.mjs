@@ -387,3 +387,30 @@ test("development security assertions fail closed on unexpected grants or missin
     await db.close();
   }
 });
+
+test("v0.8 read-only security report checks effective grants, forced RLS and PUBLIC execution without modifying records", async () => {
+  const { db } = await database();
+  try {
+    const sql = fs.readFileSync(new URL("../docs/supabase/v0.8-read-only-security.sql", import.meta.url), "utf8");
+    const results = await db.exec(sql);
+    const report = results.flatMap(result => result.rows).find(row => row.security_verification)?.security_verification;
+    assert.ok(report);
+    assert.equal(report.rls.length, 2);
+    assert.ok(report.rls.every(row => row.enabled && row.forced));
+    assert.equal(report.policies.length, 4);
+    assert.equal(report.effective_table_privileges.length, 4);
+    for (const row of report.effective_table_privileges) {
+      assert.equal(row.can_select, row.rolname === "authenticated");
+      for (const permission of ["can_insert", "can_update", "can_delete", "can_truncate", "can_reference", "can_trigger"]) assert.equal(row[permission], false);
+    }
+    assert.equal(report.functions.length, 1);
+    const fn = report.functions[0];
+    assert.equal(fn.security_definer, true);
+    assert.equal(fn.anon_execute, false);
+    assert.equal(fn.public_execute, false);
+    assert.equal(fn.authenticated_execute, true);
+    assert.ok(fn.proconfig.includes('search_path=""'));
+    assert.equal((await db.query("select count(*)::int as n from public.paper_operations")).rows[0].n, 0);
+    assert.equal((await db.query("select count(*)::int as n from public.paper_workspaces")).rows[0].n, 0);
+  } finally { await db.close(); }
+});

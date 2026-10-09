@@ -17,10 +17,11 @@ const production = process.argv.includes("--production");
 nextEnv.loadEnvConfig(process.cwd(), !production);
 try {
   const config = supabaseConfig();
+  if (process.env.NEXT_PUBLIC_QUICKEXIT_REGISTRATION_ENABLED === "true" && (process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED !== "true" || !config)) throw Error("Registration requires configured, explicitly enabled accounts.");
   console.log(
     config
       ? process.env.NEXT_PUBLIC_QUICKEXIT_ACCOUNTS_ENABLED === "true"
-        ? "Public Supabase configuration validated; accounts enabled (hosted verification not performed)."
+        ? "Public Supabase configuration validated; accounts enabled (hosted verification not performed; registration has a separate gate)."
         : "Public Supabase configuration validated; accounts gated off, Try Demo available."
       : "Supabase is unconfigured. Accounts disabled; Try Demo available.",
   );

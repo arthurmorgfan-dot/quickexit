@@ -2370,3 +2370,10 @@
 .qw-beta-feedback textarea { resize: vertical; }
 .qw-beta-feedback button, .qw-beta-actions button { min-height: 44px; }
 .qw-beta-feedback :focus-visible, .qw-introduction :focus-visible { outline: 2px solid #96edb9; outline-offset: 4px; }
+.qw-build-label { display: block; overflow-wrap: anywhere; font-size: 10px; margin-top: 8px; color: #a6b4ad; }
+.qw-demo-import { width: 100%; min-width: 0; }
+.qw-import-preview { display: grid; gap: 12px; margin: 16px 0; }
+.qw-import-preview > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-bottom: 1px solid #ffffff12; padding-bottom: 10px; }
+.qw-import-preview dt { color: #a6b4ad; }
+.qw-import-preview dd { margin: 0; overflow-wrap: anywhere; }
+.qw-demo-import button { min-height: 44px; }

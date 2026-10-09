@@ -6,17 +6,18 @@ import { authenticate } from "@/lib/account/auth-flows";
 import ConfirmationNotice from "./ConfirmationNotice";
 import Brand from "@/components/ui/Brand";
 import { browserSupabase } from "@/lib/supabase/browser";
-import { supabaseSetup } from "@/lib/supabase/config";
+import { registrationEnabled, supabaseSetup } from "@/lib/supabase/config";
 export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter();
   const signup = mode === "signup",
-    configured = supabaseSetup().status === "ready";
+    configured = supabaseSetup().status === "ready",
+    allowed = configured && (!signup || registrationEnabled());
   const [pending, setPending] = useState(false),
     [message, setMessage] = useState(""),
     [success, setSuccess] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (pending) return;
+    if (pending || !allowed) return;
     setPending(true);
     setMessage("");
     setSuccess(false);
@@ -61,10 +62,9 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         <Suspense fallback={null}>
           <ConfirmationNotice />
         </Suspense>
-        {!configured && (
+        {!allowed && (
           <p className="qe-auth-message" role="status">
-            Accounts are not enabled on this deployment yet. Try Demo remains
-            available.
+            {configured ? "Public registration is closed. Invited testers can sign in; Try Demo remains available." : "Accounts are not enabled on this deployment yet. Try Demo remains available."}
           </p>
         )}
         <form onSubmit={submit}>
@@ -77,7 +77,7 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
               autoComplete="email"
               required
               maxLength={254}
-              disabled={pending || !configured}
+              disabled={pending || !allowed}
             />
           </label>
           <label htmlFor="auth-password">
@@ -90,7 +90,7 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
               required
               minLength={signup ? 12 : 1}
               maxLength={128}
-              disabled={pending || !configured}
+              disabled={pending || !allowed}
             />
           </label>
           {signup && (
@@ -102,7 +102,7 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           <button
             className="button button-primary"
             type="submit"
-            disabled={pending || !configured}
+            disabled={pending || !allowed}
           >
             {pending ? "Please wait…" : signup ? "Create account" : "Sign in"}
           </button>
@@ -120,12 +120,12 @@ export default function AuthForm({ mode }: { mode: "signin" | "signup" }) {
             <Link href="/forgot-password">Forgot password?</Link>
           </p>
         )}
-        <p>
+        {(signup || registrationEnabled()) && <p>
           {signup ? "Already have an account?" : "New to QuickExit?"}{" "}
           <Link href={signup ? "/signin" : "/signup"}>
             {signup ? "Sign in" : "Create account"}
           </Link>
-        </p>
+        </p>}
         <Link className="button button-secondary" href="/app?demo=1">
           Try Demo
         </Link>

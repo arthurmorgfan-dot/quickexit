@@ -8,6 +8,7 @@ import {
   encodePaperTrading,
   type DeviceStorage,
 } from "../paper-trading-storage";
+import { demoImportPreview, type DemoImportPreview } from "./import-preview";
 import { initialDemo } from "../demo-trading";
 import { initialMarket } from "../market-data";
 import {
@@ -33,6 +34,7 @@ export type WorkspaceSnapshot = DeviceSnapshot & {
   ready: boolean;
   checkingAuth: boolean;
   importAvailable: boolean;
+  importPreview: DemoImportPreview | null;
   syncMessage: string;
 };
 type Journal = {
@@ -126,6 +128,7 @@ export function createWorkspaceStore(
     ready: false,
     checkingAuth: false,
     importAvailable: false,
+    importPreview: null,
     syncMessage: "",
   };
   let snapshot = serverSnapshot;
@@ -138,6 +141,7 @@ export function createWorkspaceStore(
       ready: ready && !checkingAuth,
       checkingAuth,
       importAvailable,
+      importPreview: importAvailable ? demoImportPreview(importRaw) : null,
       syncMessage: message,
     };
     listeners.forEach((l) => l());

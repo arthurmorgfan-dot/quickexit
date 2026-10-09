@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { supabaseSetup } from "@/lib/supabase/config";
+import DemoImport from "./DemoImport";
+import { registrationEnabled, supabaseSetup } from "@/lib/supabase/config";
 import type usePersistentDemo from "./usePersistentDemo";
 type Workspace = ReturnType<typeof usePersistentDemo>;
 export default function AccountPanel({
@@ -50,26 +51,7 @@ export default function AccountPanel({
       </div>
       <div className="qw-account-actions">
         {w.importAvailable ? (
-          <>
-            <button
-              type="button"
-              className="qw-small-action"
-              onClick={() => void w.chooseImport(true)}
-            >
-              Import this device’s demo
-            </button>
-            <button
-              type="button"
-              className="qw-text-button"
-              onClick={() => void w.chooseImport(false)}
-            >
-              Start fresh
-            </button>
-            <p>
-              Your local demo stays on this device. Import is available once,
-              only into an empty account.
-            </p>
-          </>
+          <DemoImport key={active?.id} preview={w.importPreview} onChoose={w.chooseImport} />
         ) : w.syncStatus === "reauth" ? (
           <Link className="qw-text-button" href="/signin">
             Sign in to resume sync
@@ -133,9 +115,7 @@ export default function AccountPanel({
               <Link className="qw-text-button" href="/signin">
                 Sign in
               </Link>
-              <Link className="qw-text-button" href="/signup">
-                Create account
-              </Link>
+              {registrationEnabled() && <Link className="qw-text-button" href="/signup">Create account</Link>}
             </>
           ) : null)}
         {(compact || active) && (

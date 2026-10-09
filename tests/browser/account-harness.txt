@@ -1,0 +1,38 @@
+import {useState,useSyncExternalStore} from 'react';
+import {createRoot} from 'react-dom/client';
+import {createWorkspaceStore} from '../../src/lib/account/workspace-store';
+import {browserCloudTransport} from '../../src/lib/account/cloud-api';
+import {authenticate,signOutAccount} from '../../src/lib/account/auth-flows';
+import AccountPanel from '../../src/components/workspace/AccountPanel';
+const providerCall=async(path,body)=>{
+ const r=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{})});return r.json();
+};
+const client={auth:{
+ signInWithPassword:body=>providerCall('/fixture/login',body),
+ getSession:()=>providerCall('/fixture/session'),
+ signOut:()=>providerCall('/fixture/logout',{}),
+}};
+const store=createWorkspaceStore(()=>localStorage,browserCloudTransport());store.hydrate();
+client.auth.getSession().then(r=>store.setAccount(r.data.session?.user??null));
+function Harness(){
+ const s=useSyncExternalStore(store.subscribe,store.getSnapshot,store.getServerSnapshot);
+ const [error,setError]=useState('');
+ const login=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const r=await authenticate(client,'signin',f.get('email'),f.get('password'),location.origin);setError(r.message);if(r.status==='signed_in'){const session=await client.auth.getSession();await store.setAccount(session.data.session.user)}};
+ const signOut=async()=>{const r=await signOutAccount(client);if(r.signedOut)await store.setAccount(null);setError(r.message)};
+ const w={...s,authError:error,retrySync:store.retry,chooseImport:store.chooseImport,resolveConflict:store.resolveConflict,signOut};
+ return <main className="qw-card" style={{maxWidth:720,margin:'16px auto',boxSizing:'border-box'}}>
+  <h1>Local account verification fixture</h1><p>Local auth adapter and actual PGlite migration; not hosted Supabase.</p>
+  {!s.account&&<form onSubmit={login}><label>Email<input name="email" aria-label="Email" type="email" defaultValue="a@example.test"/></label><label>Password<input aria-label="Password" name="password" type="password" defaultValue="fixture-password-12"/></label><button>Sign in fixture</button></form>}
+  <AccountPanel workspace={w}/>
+  <p role="status" data-testid="sync">{s.syncStatus}</p>
+  <div className="qw-beta-actions">
+   <button disabled={!s.ready} onClick={()=>store.dispatch({type:'BUY',asset:'BTC',amount:10000,target:500,protection:null,autoExit:false,requestId:crypto.randomUUID()})}>Open paper trade</button>
+   <button disabled={!s.ready||!s.state.active} onClick={()=>store.dispatch({type:'SELL',positionId:s.state.active?.id})}>Close paper trade</button>
+   <button disabled={!s.ready||!s.state.lastClosed} onClick={()=>store.dispatch({type:'JOURNAL',tradeId:s.state.lastClosed.id,note:'Cloud fixture note.'})}>Add journal note</button>
+   <button disabled={!s.ready} onClick={()=>store.setAsset('ETH')}>Choose ETH</button>
+   <button disabled={!s.ready} onClick={()=>store.setAsset('SOL')}>Choose SOL</button>
+  </div>
+  <pre data-testid="snapshot" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:10}}>{JSON.stringify(s)}</pre>
+ </main>;
+}
+createRoot(document.getElementById('root')).render(<Harness/>);
