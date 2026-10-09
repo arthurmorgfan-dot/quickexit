@@ -50,7 +50,7 @@ const navigation = [
   { name: "Settings", icon: Settings },
 ] as const;
 const descriptions: Record<View, string> = {
-  Markets: "Real cryptocurrencies. Your next paper trade.",
+  Markets: "Explore live cryptocurrency markets.",
   Home: "A clear view of your next move.",
   Trade: "Enter with a plan. Leave with a purpose.",
   Positions: "Your money, from entry to exit.",
@@ -305,7 +305,7 @@ export default function Workspace() {
                       : view === "Positions"
                         ? "Every trade has a purpose."
                         : view === "Markets"
-                          ? "Find your next move."
+                          ? "Markets"
                         : view === "Activity"
                           ? "Your story, trade by trade."
                           : "Keep it simple."}

@@ -18,7 +18,7 @@ export function AssetMark({ asset }: { asset: Asset }) {
       className={`qw-asset-mark asset-${asset.toLowerCase()}`}
       aria-hidden="true"
     >
-      {asset === "SOL" ? <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 4h17l-3 4H2zM2 10h17l3 4H5zM5 16h17l-3 4H2z" /></svg> : ASSETS[asset].symbol}
+      {asset === "SOL" ? <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="#8cefc0" d="M5 4h17l-3 4H2z" /><path fill="#9b86f5" d="M2 10h17l3 4H5z" /><path fill="#8cefc0" d="M5 16h17l-3 4H2z" /></svg> : asset === "ETH" ? <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1 5 12l7 4 7-4z" /><path opacity=".65" d="m5 14 7 9 7-9-7 4z" /><path opacity=".5" fill="#fff" d="M12 1v15l7-4z" /></svg> : ASSETS[asset].symbol}
     </span>
   );
 }

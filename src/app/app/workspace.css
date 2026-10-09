@@ -2377,3 +2377,82 @@
 .qw-import-preview dt { color: #a6b4ad; }
 .qw-import-preview dd { margin: 0; overflow-wrap: anywhere; }
 .qw-demo-import button { min-height: 44px; }
+
+/* Markets: compact, observed-data dashboard. */
+.qm-markets { color: #edf5ef; min-width: 0; }
+.qm-feed { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; font-size: 12px; }
+.qm-feed > span { border: 1px solid #8eaf9b38; border-radius: 22px; padding: 10px 14px; color: #b7c5bd; }
+.qm-feed i { display: inline-block; width: 8px; height: 8px; background: #9caaa2; border-radius: 50%; margin-right: 8px; }
+.qm-feed .qm-live { color: #95f3c4; border-color: #95f3c440; }
+.qm-live i { background: #95f3c4; }
+.qm-featured { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+.qm-feature { padding: 20px; border: 1px solid #a9ccb322; border-radius: 14px; background: linear-gradient(145deg,#111b16,#0c1410); min-width: 0; }
+.qm-feature h2 { font-size: 16px; margin: 0 0 6px; }
+.qm-feature small, .qm-table small { color: #a7b9ad; display: block; font-size: 11px; font-weight: 400; margin-top: 5px; }
+.qm-feature .qw-asset-mark { width: 42px; height: 42px; font-size: 25px; }
+.qm-feature-body { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; margin-top: 20px; }
+.qm-price { font-size: clamp(21px,2.4vw,29px); letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
+.qm-feature-body p { margin: 8px 0 0; font-size: 13px; }
+.qm-up { color: #8beab7; }
+.qm-down { color: #ef8585; }
+.qm-muted { color: #a7b9ad; }
+.qm-sparkline { display: block; width: 100%; height: 65px; }
+.qm-spark-empty { display: grid; place-content: center; min-height: 65px; color: #a7b9ad; font-size: 11px; }
+.qm-ranges { display: flex; gap: 4px; justify-content: center; margin-top: 12px; }
+.qm-ranges button, .qm-filters button { border: 1px solid transparent; border-radius: 8px; color: #b8c8bf; background: transparent; cursor: pointer; min-width: 40px; min-height: 44px; font: inherit; font-size: 12px; }
+.qm-ranges button[aria-pressed="true"] { background: #90f0bd18; color: #a5f6ce; }
+.qm-observation { font-size: 10px; color: #a7b9ad; line-height: 1.7; margin: 8px 0 0; }
+.qm-discovery { display: flex; gap: 16px; margin: 22px 0 16px; align-items: center; }
+.qm-search { flex: 1; min-width: 0; }
+.qm-search input { width: 100%; min-width: 0; font: inherit; font-size: 13px; color: #e2eee5; background: #101914; border: 1px solid #a0bca345; border-radius: 10px; padding: 15px; }
+.qm-filters { display: flex; gap: 6px; }
+.qm-filters button { border-radius: 24px; border-color: #a0bca325; padding: 0 16px; }
+.qm-filters button[aria-pressed="true"] { color: #96f5c3; border-color: #96f5c3; background: #96f5c315; }
+.qm-table-wrap { border: 1px solid #a9ccb322; border-radius: 14px; overflow: hidden; background: #0f1813; }
+.qm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.qm-table th, .qm-table td { padding: 18px; text-align: left; border-bottom: 1px solid #a9ccb31c; }
+.qm-table thead th { color: #acbdb2; font-weight: 500; font-size: 12px; padding-block: 16px; }
+.qm-table tbody tr:last-child > * { border-bottom: 0; }
+.qm-table tbody tr:hover { background: #9aefbd07; }
+.qm-table tbody th { font-weight: 500; }
+.qm-table .qw-asset-mark { width: 40px; height: 40px; flex-shrink: 0; }
+.qm-table td { font-variant-numeric: tabular-nums; }
+.qm-table-chart { width: 23%; }
+.qm-table-chart .qm-sparkline { height: 44px; }
+.qm-table-chart small { font-size: 10px; }
+.qm-trade { background: #94f4be; color: #092414; border: 1px solid #94f4be; border-radius: 12px; padding: 12px 18px; min-height: 44px; font: inherit; font-weight: 650; white-space: nowrap; cursor: pointer; }
+.qm-trade:hover { background: #b2ffd4; }
+.qm-trade:disabled { opacity: .5; cursor: default; }
+.qm-trade span { margin-left: 10px; }
+.qm-source { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 18px 0 10px; font-size: 11px; color: #a7b9ad; }
+.qm-markets button:focus-visible, .qm-search input:focus-visible { outline: 2px solid #a5f6ce; outline-offset: 3px; }
+@media(min-width:1350px) { .qm-feature-body { grid-template-columns: 1fr 1fr; align-items: center; } }
+@media(max-width:1000px) { .qm-featured { gap: 10px; } .qm-feature { padding: 14px; } .qm-table th, .qm-table td { padding: 13px 10px; } .qm-discovery { flex-wrap: wrap; } .qm-search { flex-basis: 100%; } }
+@media(max-width:600px) {
+ .qm-featured { grid-template-columns: 1fr; gap: 12px; }
+ .qm-feature { padding: 18px; }
+ .qm-feature-body { grid-template-columns: 1fr 1fr; align-items: center; }
+ .qm-feed { justify-content: flex-start; gap: 8px; }
+ .qm-feed > span { padding: 8px 10px; }
+ .qm-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+ .qm-table, .qm-table tbody { display: block; }
+ .qm-table tr { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); padding: 10px; border-bottom: 1px solid #a9ccb31c; align-items: center; }
+ .qm-table tr:last-child { border-bottom: 0; }
+ .qm-table th, .qm-table td { display: block; border: 0; padding: 9px 5px; }
+ .qm-table tr > td:nth-child(2) { text-align: right; }
+ .qm-table tr > td:nth-child(3)::before { content: '24h change '; display: block; font-size: 10px; color: #a7b9ad; margin-bottom: 5px; }
+ .qm-table-chart { width: 100%; }
+ .qm-table tr > td:last-child { grid-column: 1/-1; }
+ .qm-trade { width: 100%; }
+ .qm-table .qw-table-asset { gap: 9px; }
+ .qm-table .qw-asset-mark { width: 32px; height: 32px; }
+}
+.qm-markets .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.qm-markets .asset-btc { background: #e99421; color: #fff8e9; border-color: #ffb94b55; }
+.qm-markets .asset-eth { background: #5e59e7; color: #dddfff; border-color: #8f8aff55; }
+.qm-markets .asset-sol { background: #080e0b; border-color: #87dcb033; }
+@media (min-width: 601px) and (max-width: 1100px) {
+ .qm-featured { grid-template-columns: 1fr; }
+ .qm-feature-body { grid-template-columns: 1fr 1fr; align-items: center; }
+ .qm-feature { padding: 20px; }
+}
