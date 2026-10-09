@@ -1,10 +1,14 @@
+import { createRequestLimit } from "../request-limit";
 import { ASSETS, type Asset } from "../demo-trading";
 import { TIMEFRAMES, SUPPORTED_INTERVALS, type Timeframe } from "./models";
 import { createMarketService, MarketFailure } from "./service";
 export function createMarketApi(
   market: ReturnType<typeof createMarketService>,
+  limit = createRequestLimit({ capacity: 120, perSecond: 10 }),
 ) {
   return async function GET(request: Request) {
+    const retryAfter = limit();
+    if (retryAfter) return Response.json({ error: "Too many market requests. Try again shortly." }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(retryAfter) } });
     const p = new URL(request.url).searchParams,
       asset = p.get("asset"),
       kind = p.get("kind"),

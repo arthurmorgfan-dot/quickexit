@@ -1,0 +1,4 @@
+/** Rendering this state only offers navigation; creation uses the existing confirmation controls. */
+export default function TradeAccountState({ canChoose, onPortfolio }: { canChoose: boolean; onPortfolio: () => void }) {
+  return <section className="qw-card qx-empty-trade" aria-labelledby="empty-trade-title"><h2 id="empty-trade-title">{canChoose ? "Choose your starting portfolio" : "Your paper portfolio is unavailable"}</h2><p>{canChoose ? "Before paper trading, choose and explicitly confirm a fresh starting portfolio or a reviewed demo import. No cloud portfolio or simulated balance is created until you confirm." : "Wait for account verification or resolve synchronization before paper trading. No portfolio will be created automatically."}</p><button type="button" className="qm-trade" onClick={onPortfolio}>View portfolio controls →</button></section>;
+}

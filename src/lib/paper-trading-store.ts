@@ -155,6 +155,11 @@ export function createPaperTradingStore(getStorage: () => DeviceStorage) {
       }
       if (action.type === "MARKET_PRICE") return; // Only validated provider quotes can enter live state.
       if (snapshot.market.mode === "live") {
+        const feedReady = snapshot.marketStatus === "connected" || snapshot.marketStatus === "loading";
+        if ((action.type === "BUY" || action.type === "SELL") && !feedReady) {
+          publish({ ...snapshot, state: { ...snapshot.state, announcement: "Market feed unavailable. Reconnect and wait for verified fresh prices before trading." } });
+          return;
+        }
         if (action.type === "MOVE" || action.type === "PLAY") return;
         if (action.type === "SELL" && snapshot.state.active && (!snapshot.market.quotes[snapshot.state.active.asset] || !freshQuote(snapshot.market.quotes[snapshot.state.active.asset]!))) {
           publish({ ...snapshot, marketStatus: "unavailable", state: { ...snapshot.state, announcement: "A fresh market quote is required to close this paper trade." } });

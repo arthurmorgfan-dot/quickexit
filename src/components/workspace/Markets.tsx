@@ -4,7 +4,7 @@ import { fetchMarket } from "@/lib/market/client";
 import { normalizeStats, normalizeTicker, dataStatus, type Statistics, type MarketResult } from "@/lib/market/models";
 import type { MarketQuote } from "@/lib/market-data";
 import { readIntelligence } from "@/lib/market/intelligence-reader";
-import { historyLabel, verifiedChange, matchesMovement, type MarketFilter } from "@/lib/market/markets-view";
+import { historyLabel, verifiedChange, matchesMovement, type MarketFilter, sortMarketRows, type MarketSort } from "@/lib/market/markets-view";
 import type { History, Timeframe } from "@/lib/market/models";
 import useMarketIntelligence from "./useMarketIntelligence";
 import MarketSparkline from "./MarketSparkline";
@@ -15,6 +15,7 @@ export default function Markets({ onSelect, disabled, activeAsset }: { onSelect:
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<Partial<Record<Asset, Row>>>({});
   const [filter, setFilter] = useState<MarketFilter>("All");
+  const [sort, setSort] = useState<MarketSort>("default");
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(0);
   useEffect(() => {
@@ -54,7 +55,11 @@ export default function Markets({ onSelect, disabled, activeAsset }: { onSelect:
     return () => { window.removeEventListener("online", connection); window.removeEventListener("offline", connection); stopped = true; clearTimeout(first); clearTimeout(timer); clearInterval(clock); controller?.abort(); };
   }, []);
   const allAssets = Object.keys(ASSETS) as Asset[];
-  const assets = allAssets.filter(asset => `${asset} ${ASSETS[asset].name}`.toLowerCase().includes(search.trim().toLowerCase()) && matchesMovement(verifiedChange(rows[asset]?.stats, now, rows[asset]?.error, offline), filter));
+  const matched = allAssets.filter(asset => `${asset} ${ASSETS[asset].name}`.toLowerCase().includes(search.trim().toLowerCase()) && matchesMovement(verifiedChange(rows[asset]?.stats, now, rows[asset]?.error, offline), filter));
+  const assets = sortMarketRows(matched.map(asset => ({ asset, name: ASSETS[asset].name,
+    price: dataStatus(rows[asset]?.quote?.data, !!rows[asset]?.quote?.stale || !!rows[asset]?.error || offline, now) === "Live" ? rows[asset]?.quote?.data.price : undefined,
+    change: verifiedChange(rows[asset]?.stats, now, rows[asset]?.error, offline),
+  })), sort).map(row => row.asset);
   const statuses = allAssets.map(asset => !rows[asset] ? "Loading" : dataStatus(rows[asset]?.quote?.data, !!rows[asset]?.quote?.stale || !!rows[asset]?.error || offline, now));
   const liveCount = statuses.filter(status => status === "Live").length;
   const feedLabel = offline ? "Offline · last known data" : liveCount === 3 ? "Live market data" : statuses.every(s => s === "Loading") ? "Connecting to Coinbase…" : `${liveCount}/3 fresh prices · ${statuses.includes("Stale") ? "stale data" : "delayed or unavailable"}`;
@@ -62,7 +67,7 @@ export default function Markets({ onSelect, disabled, activeAsset }: { onSelect:
     <div className="qm-feed"><span className={liveCount === 3 && !offline ? "qm-live" : ""} role="status"><i aria-hidden="true" />{feedLabel}</span><span className="qm-currency">€ EUR</span></div>
     <div className="qm-featured">{allAssets.map(asset => <FeaturedMarket key={asset} asset={asset} row={rows[asset]} now={now} offline={offline} />)}</div>
     {activeAsset && <p className="qw-market-status">Your {activeAsset} paper position is open. Trade returns to that position; your next asset choice is remembered.</p>}
-    <div className="qm-discovery"><label className="qm-search"><span className="sr-only">Search cryptocurrencies</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search cryptocurrencies (Bitcoin, ETH, SOL…)" /></label><div className="qm-filters" role="group" aria-label="Market filters">{(["All", "Gainers", "Losers"] as const).map(f => <button type="button" key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{f}</button>)}</div></div>
+    <div className="qm-discovery"><label className="qm-search"><span className="sr-only">Search cryptocurrencies</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search cryptocurrencies (Bitcoin, ETH, SOL…)" /></label><div className="qm-filters" role="group" aria-label="Market filters">{(["All", "Gainers", "Losers"] as const).map(f => <button type="button" key={f} aria-pressed={filter === f} onClick={() => setFilter(f)}>{f}</button>)}</div><label className="qx-market-sort"><span className="sr-only">Sort markets</span><select aria-label="Sort markets" value={sort} onChange={e => setSort(e.target.value as MarketSort)}><option value="default">Featured order</option><option value="name">Name A–Z</option><option value="price">Price high–low</option><option value="change">24h change high–low</option></select></label></div>
     <div className="qm-table-wrap"><table className="qm-table"><caption className="sr-only">Supported cryptocurrency markets · EUR prices</caption><thead><tr><th scope="col">Asset</th><th scope="col">Price</th><th scope="col">24h Change</th><th scope="col">24h Chart</th><th scope="col">Action</th></tr></thead><tbody>{assets.map(asset => {
       const row = rows[asset], quote = row?.quote;
       const status = !row ? "Loading" : dataStatus(quote?.data, !!quote?.stale || !!row.error || offline, now);

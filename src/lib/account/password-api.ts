@@ -1,9 +1,11 @@
+import { createRequestLimit } from "../request-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { changePassword } from "./auth-flows";
 import { readCloudBody } from "./request-validation";
 import { sameOriginWrite } from "./request-origin";
 export function createPasswordApi(
   getClient: () => Promise<SupabaseClient | null>,
+  limit = createRequestLimit({ capacity: 10, perSecond: 0.5 }),
 ) {
   const reply = (body: unknown, status = 200) =>
     Response.json(body, {
@@ -20,6 +22,8 @@ export function createPasswordApi(
       request.headers.get("content-type")?.split(";")[0] !== "application/json"
     )
       return reply({ ok: false, message: "JSON required." }, 415);
+    const retryAfter = limit();
+    if (retryAfter) return Response.json({ ok: false, message: "Too many password requests. Try again shortly." }, { status: 429, headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "Retry-After": String(retryAfter) } });
     try {
       let input: unknown;
       try {

@@ -21,9 +21,10 @@ export default function usePersistentDemo() {
   useEffect(() => {
     const reduced = () =>
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    store.hydrate(reduced());
     const client = browserSupabase(),
       demo = new URLSearchParams(window.location.search).get("demo") === "1";
+    store.setAuthChecking(!!client && !demo);
+    store.hydrate(reduced());
     const unsubscribe =
       client && !demo
         ? observeAccountSession(client, store, setAuthError)
@@ -55,11 +56,15 @@ export default function usePersistentDemo() {
       snapshot.market.mode !== "live"
     )
       return;
-    return watchMarket(
+    const offline = () => store.setMarketStatus("unavailable");
+    window.addEventListener("offline", offline);
+    const stop = watchMarket(
       createServerQuoteProvider(),
-      store.receiveMarketQuotes,
-      store.setMarketStatus,
+      quotes => { if (navigator.onLine) store.receiveMarketQuotes(quotes); },
+      status => store.setMarketStatus(navigator.onLine ? status : "unavailable"),
     );
+    if (!navigator.onLine) offline();
+    return () => { window.removeEventListener("offline", offline); stop(); };
   }, [
     store,
     snapshot.hydrated,
@@ -72,7 +77,10 @@ export default function usePersistentDemo() {
   const belongs = () => store.getSnapshot().account?.id === scopeId;
   return {
     ...snapshot,
+    checkingAuth: !snapshot.hydrated || snapshot.checkingAuth,
+    ready: snapshot.hydrated && snapshot.ready,
     authError,
+    authStatus: (!snapshot.hydrated || snapshot.checkingAuth) ? authError ? "restoration_unavailable" as const : "restoring" as const : snapshot.account ? "authenticated" as const : "signed_out" as const,
     dispatch,
     setAsset: (asset: Parameters<typeof store.setAsset>[0]) => {
       if (belongs()) store.setAsset(asset);

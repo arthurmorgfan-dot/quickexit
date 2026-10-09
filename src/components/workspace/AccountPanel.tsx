@@ -49,7 +49,7 @@ export default function AccountPanel({
               : enabled ? "Use the demo without registering, or sign in to save paper trading across devices." : "Demo mode · saved on this device. Hosted accounts and registration remain disabled while verification is completed.")}
         </p>
       </div>
-      <div className="qw-account-actions">
+      <div className="qw-account-actions" inert={w.checkingAuth}>
         {w.importAvailable ? (
           <DemoImport key={active?.id} preview={w.importPreview} onChoose={w.chooseImport} />
         ) : w.syncStatus === "reauth" ? (

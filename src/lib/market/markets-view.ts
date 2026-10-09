@@ -24,3 +24,14 @@ export function sparklinePath(candles: Candle[], granularity: number) {
     return `${!i || c.time - candles[i - 1].time > granularity ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
   }).join(" ");
 }
+
+export type MarketSort = "default" | "name" | "price" | "change";
+export function sortMarketRows<T extends { name: string; price?: number; change?: number }>(rows: T[], sort: MarketSort): T[] {
+  return [...rows].sort((a, b) => {
+    if (sort === "default") return 0;
+    if (sort === "name") return a.name.localeCompare(b.name);
+    const left = a[sort], right = b[sort];
+    const l = left !== undefined && Number.isFinite(left), r = right !== undefined && Number.isFinite(right);
+    return l && r ? right! - left! || a.name.localeCompare(b.name) : l ? -1 : r ? 1 : a.name.localeCompare(b.name);
+  });
+}

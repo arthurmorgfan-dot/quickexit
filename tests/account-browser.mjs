@@ -94,6 +94,21 @@ try{
  for(const width of [320,390,768,1440]){
   owners={A:{id:crypto.randomUUID(),email:'a@example.test'},B:{id:crypto.randomUUID(),email:'b@example.test'}};
   await serialize(async()=>{await db.exec('reset role');for(const user of Object.values(owners))await db.query('insert into auth.users values($1)',[user.id])});
+  // Empty-device authentication must not create a workspace, even after Cancel/reload.
+  const emptyContext=await browser.newContext({viewport:{width,height:1000}});
+  const empty=await emptyContext.newPage();let emptyWrites=0;
+  empty.on('request',r=>{if(r.url().endsWith('/api/paper')&&r.method()==='POST')emptyWrites++});
+  await empty.goto(origin);await login(empty,'A');await status(empty,'import');
+  assert.equal((await getSnapshot(empty)).ready,false);
+  await empty.getByRole('button',{name:'Start fresh',exact:true}).click();
+  await empty.getByRole('button',{name:'Confirm fresh account',exact:true}).waitFor();
+  assert.match(await empty.locator('.qw-reset-confirmation').innerText(),/Create a cloud paper portfolio with/);
+  await empty.getByRole('button',{name:'Cancel',exact:true}).click();
+  await empty.reload();await status(empty,'import');
+  assert.equal(emptyWrites,0);
+  await serialize(async()=>{await db.exec('reset role');assert.equal((await db.query('select count(*)::int as n from public.paper_workspaces where user_id=$1',[owners.A.id])).rows[0].n,0)});
+  assert.ok(await empty.evaluate(()=>document.documentElement.scrollWidth)<=width);
+  await emptyContext.close();
   let state=demoReducer(initialDemo(),{type:'BUY',asset:'ETH',amount:10000,target:500,protection:null,autoExit:false,requestId:crypto.randomUUID()});state=demoReducer(state,{type:'SELL'});state=demoReducer(state,{type:'JOURNAL',tradeId:state.lastClosed.id,note:'Preserve existing note.'});const seed=encodePaperTrading({asset:'ETH',state});
   const contexts=await Promise.all([1,2,3].map(()=>browser.newContext({viewport:{width,height:1000}})));
   const [c1,,cb]=contexts;await cb.addInitScript(raw=>{if(!sessionStorage.getItem('seeded')){localStorage.setItem('quickexit.paper-trading',raw);sessionStorage.setItem('seeded','1')}},seed);await c1.addInitScript(raw=>{if(!sessionStorage.getItem('seeded')){localStorage.setItem('quickexit.paper-trading',raw);sessionStorage.setItem('seeded','1')}},seed);
@@ -112,7 +127,7 @@ try{
   await two.getByRole('button',{name:'Choose SOL',exact:true}).click();await status(two,'saved');await one.getByRole('button',{name:'Choose SOL',exact:true}).click();await status(one,'conflict');one.once('dialog',d=>d.accept());await one.getByRole('button',{name:'Use cloud copy',exact:true}).click();await status(one,'saved');assert.equal((await getSnapshot(one)).asset,'SOL');assert.ok(await one.evaluate(()=>Object.keys(localStorage).some(k=>k.includes('.recovery'))));
   await one.getByRole('button',{name:'Sign out',exact:true}).click();await status(one,'demo');assert.equal(await one.evaluate(()=>localStorage.getItem('quickexit.paper-trading')),seed);
   for(const p of [one,two,other])assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth)<=width);assert.deepEqual(errors,[]);
-  results.push({width,twoAccounts:true,twoBrowserSessions:true,importConfirmed:true,freshAccountConfirmed:true,guestPreserved:true,lostResponseRecovery:true,receiptAndJournalRestored:true,conflicts:true,ownership:true,errors});for(const c of contexts)await c.close();
+  results.push({width,twoAccounts:true,twoBrowserSessions:true,importConfirmed:true,freshAccountConfirmed:true,emptyAccountCancelNoWrites:true,guestPreserved:true,lostResponseRecovery:true,receiptAndJournalRestored:true,conflicts:true,ownership:true,errors});for(const c of contexts)await c.close();
  }
  console.log(JSON.stringify({auth:'local fixture, not Supabase GoTrue',database:'actual migration in PGlite',results},null,2));
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));await db.close()}

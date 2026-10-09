@@ -1,3 +1,4 @@
+import { createRequestLimit } from "../request-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sameOriginWrite } from "@/lib/account/request-origin";
 import {
@@ -28,8 +29,12 @@ const record = (
 };
 export function createPaperApi(
   getClient: () => Promise<SupabaseClient | null>,
+  limit = createRequestLimit({ capacity: 30, perSecond: 1, maxKeys: 1000 }),
+  budget = createRequestLimit({ capacity: 120, perSecond: 10 }),
 ) {
   async function verifiedClient() {
+    const cooldown = budget();
+    if (cooldown) return { response: Response.json({ error: "Too many account requests. Try again shortly." }, { status: 429, headers: { ...headers, "Retry-After": String(cooldown) } }) };
     const client = await getClient();
     if (!client)
       return {
@@ -50,6 +55,8 @@ export function createPaperApi(
       };
     if (error || !data.user)
       return { response: reply({ error: "Sign in required." }, 401) };
+    const retryAfter = limit(data.user.id);
+    if (retryAfter) return { response: Response.json({ error: "Too many account requests. Your device copy is kept; try again shortly." }, { status: 429, headers: { ...headers, "Retry-After": String(retryAfter) } }) };
     return { client, user: data.user };
   }
   async function GET() {

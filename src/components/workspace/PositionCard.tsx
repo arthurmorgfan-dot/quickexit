@@ -29,11 +29,13 @@ export function ActivePosition({
   dispatch,
   playing,
   live = false,
+  canSell = true,
 }: {
   position: Position;
   dispatch: Dispatch<DemoAction>;
   playing: boolean;
   live?: boolean;
+  canSell?: boolean;
 }) {
   const [editing, setEditing] = useState(false),
     [target, setTarget] = useState(String(p.target / 100)),
@@ -159,6 +161,7 @@ export function ActivePosition({
       <div className="qw-position-actions">
         <ActionButton
           onClick={() => dispatch({ type: "SELL", positionId: p.id })}
+          disabled={!canSell}
         >
           Sell Now
         </ActionButton>

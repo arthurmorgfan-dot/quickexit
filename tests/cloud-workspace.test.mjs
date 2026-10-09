@@ -120,6 +120,7 @@ test("guest -> account import -> sign out isolates accounts and preserves the or
   assert.equal(s.getSnapshot().account.id, A.id);
   assert.equal(s.getSnapshot().importAvailable, true);
   assert.equal(s.getSnapshot().ready, false);
+  assert.equal(f.commits(), 0);
   s.dispatch(buy);
   assert.equal(s.getSnapshot().state.active, null);
   await s.chooseImport(true);
@@ -520,6 +521,7 @@ test("stable UI actions from a previous account cannot mutate the new account", 
   const guestAction = s.scopedDispatch(undefined);
   assert.equal(guestAction, s.scopedDispatch(undefined));
   await s.setAccount(A);
+  await s.chooseImport(false); // Explicitly confirm the starting portfolio.
   guestAction(buy);
   assert.equal(s.getSnapshot().state.active, null);
   const accountAction = s.scopedDispatch(A.id);
@@ -618,6 +620,7 @@ test("a durable operation journal is required before network writes; storage rec
   const f = setup(),
     s = f.fresh();
   await s.setAccount(A);
+  await s.chooseImport(false); // Explicitly confirm the starting portfolio.
   const count = f.commits(),
     original = f.storage.setItem;
   f.storage.setItem = () => {
@@ -728,6 +731,7 @@ test("recovering an invalid account cache retains earlier recovery copies", asyn
 test("trade notes sync in the compatible v3 aggregate, preserve receipts, and stay account scoped", async () => {
   const f = setup(), s = f.fresh();
   await s.setAccount(A);
+  await s.chooseImport(false); // Explicitly confirm the starting portfolio.
   s.dispatch(buy);
   s.dispatch({ type: "SELL" });
   const trade = s.getSnapshot().state.completed.find(p => !p.example);
@@ -778,4 +782,42 @@ test("import review is captured, does not mutate the guest and cannot silently i
   await s.chooseImport(true);
   assert.equal(f.commits(), 1);
   s.dispose(); guest.dispose();
+});
+
+
+test("empty-device sign-in and retries remain uninitialized until explicit confirmation", async () => {
+  const f = setup(), s = f.fresh();
+  const guest = f.storage.getItem(KEY);
+  await s.setAccount(A);
+  assert.equal(s.getSnapshot().syncStatus, "import");
+  assert.equal(s.getSnapshot().ready, false);
+  assert.equal(s.getSnapshot().importAvailable, true);
+  assert.equal(s.getSnapshot().importPreview, null);
+  assert.equal(f.commits(), 0);
+  s.dispatch(buy);
+  await s.retry();
+  assert.equal(f.commits(), 0);
+  assert.equal(f.row(A.id).raw, null);
+  await s.setAccount(null); // Declining by leaving the account writes nothing.
+  assert.equal(f.storage.getItem(KEY), guest);
+  const next = f.fresh();
+  await next.setAccount(A);
+  assert.equal(f.commits(), 0);
+  await next.chooseImport(false); // Explicit confirmation.
+  assert.equal(f.commits(), 1);
+  assert.equal(f.row(A.id).raw, clean());
+  await next.chooseImport(false);
+  assert.equal(f.commits(), 1);
+  assert.equal(f.storage.getItem(KEY), guest);
+  s.dispose(); next.dispose();
+});
+
+test('unresolved authentication blocks initialization, retry and cloud modifications',async()=>{
+ const data=new Map();let writes=0,loads=0;
+ const storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+ const transport={load:async userId=>{loads++;return {userId,revision:0,importDecided:false,raw:null}},commit:async()=>{writes++;throw Error('Unexpected write')}};
+ const s=createWorkspaceStore(()=>storage,transport);s.hydrate();await s.setAccount(A);assert.equal(s.getSnapshot().importAvailable,true);
+ s.setAuthChecking(true);const baseline=loads;
+ await s.chooseImport(false);await s.chooseImport(true);await s.retry();await s.resolveConflict(true);s.dispatch(buy);await settle();
+ assert.equal(writes,0);assert.equal(loads,baseline);assert.equal(s.getSnapshot().ready,false);assert.equal(s.getSnapshot().importAvailable,true);s.dispose();
 });

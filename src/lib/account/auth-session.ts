@@ -23,9 +23,13 @@ export function observeAccountSession(
   store.setAuthChecking(true);
   const initialEpoch = epoch;
   const { data } = client.auth.onAuthStateChange((_event, session) => {
-    epoch++;
+    // INITIAL_SESSION cannot distinguish missing credentials from recovery errors.
+    // The explicit lookup owns initialization; later auth transitions supersede it.
+    if (_event === "INITIAL_SESSION") return;
+    if (!session && _event !== "SIGNED_OUT") return;
+    const eventEpoch = ++epoch;
     queueMicrotask(() => {
-      if (alive) {
+      if (alive && epoch === eventEpoch) {
         apply(session);
         if (_event === "SIGNED_OUT")
           onError(
@@ -39,13 +43,13 @@ export function observeAccountSession(
     .then(({ data, error }) => {
       if (!alive || epoch !== initialEpoch) return;
       if (error) {
-        onError("Account session unavailable. Try Demo or sign in again.");
+        onError("Session restoration unavailable. Your account data has not been changed.");
         store.setAuthChecking(true); // Do not unlock an uncertain account or silently switch to Demo.
       } else apply(data.session);
     })
     .catch(() => {
       if (!alive || epoch !== initialEpoch) return;
-      onError("Account session unavailable. Try Demo or sign in again.");
+      onError("Session restoration unavailable. Your account data has not been changed.");
       store.setAuthChecking(true);
     });
   return () => {

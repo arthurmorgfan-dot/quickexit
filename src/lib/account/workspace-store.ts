@@ -192,6 +192,7 @@ export function createWorkspaceStore(
   };
   const flush = async () => {
     if (
+      checkingAuth ||
       !account ||
       !journal ||
       journal.revision === null ||
@@ -312,7 +313,7 @@ export function createWorkspaceStore(
     if (journal?.owner !== userId) throw Error("Account boundary mismatch");
   };
   const chooseImport = async (useLocal: boolean) => {
-    if (!account || !journal || !importAvailable || journal.revision !== 0)
+    if (checkingAuth || !account || !journal || !importAvailable || journal.revision !== 0)
       return;
     const raw = useLocal && importRaw ? importRaw : cleanRaw();
     importAvailable = false;
@@ -330,7 +331,7 @@ export function createWorkspaceStore(
     await flush();
   };
   const reconcile = async () => {
-    if (!account || !journal || running) return;
+    if (checkingAuth || !account || !journal || running) return;
     const epoch = generation,
       userId = account.id,
       known =
@@ -390,8 +391,7 @@ export function createWorkspaceStore(
         }
         emit();
         running = false;
-        // No existing local state means there is nothing to ask the user to import.
-        if (!importRaw) await chooseImport(false);
+        // Even an empty device requires an explicit starting-portfolio decision.
       }
     } catch (error) {
       if (epoch === generation) {
@@ -481,6 +481,7 @@ export function createWorkspaceStore(
     await reconcile();
   };
   const resolveConflict = async (useDevice: boolean) => {
+    if (checkingAuth) return;
     if (status !== "conflict" || !account || !journal || running) return;
     const epoch = generation,
       userId = account.id;
@@ -614,7 +615,7 @@ export function createWorkspaceStore(
       void reconcile();
     },
     retry: async () => {
-      if (status === "conflict" || status === "reauth") return;
+      if (checkingAuth || status === "conflict" || status === "reauth") return;
       if (journal?.inflight || journal?.queued) await flush();
       else await reconcile();
     },

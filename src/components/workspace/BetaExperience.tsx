@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { completeIntroduction, introductionSeen, feedbackReport } from "@/lib/beta-experience";
 
-export function Introduction({ always = false, onMarkets }: { always?: boolean; onMarkets: () => void }) {
+export function Introduction({ always = false, compact = false, onMarkets }: { always?: boolean; compact?: boolean; onMarkets: () => void }) {
   const [visible, setVisible] = useState(false);
   const [warning, setWarning] = useState("");
   useEffect(() => {
@@ -19,7 +19,7 @@ export function Introduction({ always = false, onMarkets }: { always?: boolean; 
     if (explore) onMarkets();
   };
   return <>
-    {(visible || always) && <section className="qw-card qw-introduction" aria-labelledby="intro-title">
+    {(visible || always) && <section className={`qw-card qw-introduction${compact ? " qx-compact-intro" : ""}`} aria-labelledby="intro-title">
       <div className="qw-card-heading"><h2 id="intro-title">A small practice. A clearer plan.</h2><span className="qw-badge">OPTIONAL INTRO</span></div>
       <p>QuickExit lets you practise a trade from entry to exit. Live market prices and charts come from Coinbase; all balances, fees, trades and transfers are simulated.</p>
       <ol><li>Choose BTC, ETH or SOL in Markets.</li><li>Choose an investment and a net profit target in Trade. Review costs before confirming your paper trade.</li><li>Monitor your position or choose auto-exit. Review fixed receipts, performance and journal notes in Positions and Home.</li></ol>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
+  ArrowRight,
   House,
   ChartNoAxesCombined,
   Layers,
@@ -11,10 +12,10 @@ import {
   Landmark,
   Settings,
   FlaskConical,
-  ArrowRight,
   ShieldCheck,
   RotateCcw,
 } from "lucide-react";
+import PortfolioAllocation from "./PortfolioAllocation";
 import Brand from "@/components/ui/Brand";
 import {
   ASSETS,
@@ -35,6 +36,8 @@ import Positions from "./Positions";
 import MobileDisclosure from "./MobileDisclosure";
 import usePersistentDemo from "./usePersistentDemo";
 import Markets from "./Markets";
+import MarketsExperience from "./MarketsExperience";
+import TradeAccountState from "./TradeAccountState";
 import Performance from "./Performance";
 import AccountPanel from "./AccountPanel";
 import { Introduction, BetaFeedback, OfflineNotice } from "./BetaExperience";
@@ -42,23 +45,21 @@ import { buildInfo } from "@/lib/build-info";
 import { supabaseSetup } from "@/lib/supabase/config";
 const navigation = [
   { name: "Markets", icon: House },
-  { name: "Home", icon: House },
   { name: "Trade", icon: ChartNoAxesCombined },
-  { name: "Positions", icon: Layers },
-  { name: "Activity", icon: List },
+  { name: "Portfolio", icon: Layers },
+  { name: "History", icon: List },
   { name: "Cash Out", icon: Landmark },
   { name: "Settings", icon: Settings },
 ] as const;
 const descriptions: Record<View, string> = {
   Markets: "Explore live cryptocurrency markets.",
-  Home: "A clear view of your next move.",
   Trade: "Enter with a plan. Leave with a purpose.",
-  Positions: "Your money, from entry to exit.",
-  Activity: "Every move, in plain language.",
+  Portfolio: "Your money, from entry to exit.",
+  History: "Every move, in plain language.",
   "Cash Out": "Your money’s next destination: home.",
   Settings: "A demo that moves at your pace.",
 };
-export default function Workspace() {
+export default function Workspace({ initialView = "Markets" }: { initialView?: View }) {
   const workspace = usePersistentDemo();
   const {
     state,
@@ -85,7 +86,7 @@ export default function Workspace() {
     const timer = setInterval(update, 5000);
     return () => { clearTimeout(first); clearInterval(timer); };
   }, []);
-  const [view, setView] = useState<View>("Markets"),
+  const [view, setView] = useState<View>(initialView),
     [confirmReset, setConfirmReset] = useState(false);
   const saveLabel = checkingAuth
     ? "Checking account…"
@@ -216,7 +217,7 @@ export default function Workspace() {
             >
               <Icon size={17} />
               <span>{name}</span>
-              {name === "Positions" && state.active && (
+              {name === "Portfolio" && state.active && (
                 <span className="qw-nav-count">1</span>
               )}
             </button>
@@ -226,7 +227,7 @@ export default function Workspace() {
           <div className="qw-demo-label">
             <FlaskConical size={16} />
             <div>
-              <strong>{account ? "Paper workspace" : "Demo workspace"}</strong>
+              <strong>{checkingAuth ? "Checking account…" : account ? "Paper workspace" : "Demo workspace"}</strong>
               <span>Real clarity. Simulated money.</span>
             </div>
           </div>
@@ -255,13 +256,13 @@ export default function Workspace() {
             <button
               type="button"
               className="qw-mobile-home"
-              aria-label="Workspace Home"
-              aria-current={view === "Home" ? "page" : undefined}
-              onClick={() => navigate("Home")}
+              aria-label="Markets workspace"
+              aria-current={view === "Markets" ? "page" : undefined}
+              onClick={() => navigate("Markets")}
             >
               <House size={19} />
             </button>
-            {account ? (
+            {checkingAuth ? <span className="qw-overline">Checking account…</span> : account ? (
               <button
                 type="button"
                 className="qw-account-link"
@@ -279,14 +280,14 @@ export default function Workspace() {
             <button type="button" className="qw-text-button" aria-label="Workspace settings" onClick={() => navigate("Settings")}><Settings size={18} /></button>
             <span
               className="qw-avatar"
-              aria-label={account ? "Paper account" : "Demo profile"}
+              aria-label={checkingAuth ? "Checking account" : account ? "Paper account" : "Demo profile"}
             >
-              {account ? account.email.slice(0, 1).toUpperCase() : "D"}
+              {checkingAuth ? "…" : account ? account.email.slice(0, 1).toUpperCase() : "D"}
             </span>
           </div>
         </header>
         <main id="workspace-main" className="qw-main" tabIndex={-1}>
-          <div className="qw-page-heading">
+          <div className={`qw-page-heading${view === "Markets" ? " qx-markets-heading" : ""}`}>
             <div>
               <span className="qw-overline">
                 QUICKEXIT / {view.toUpperCase()}
@@ -298,41 +299,38 @@ export default function Workspace() {
                     : state.lastClosed
                       ? "A good trade has an ending."
                       : "Make your next move."
-                  : view === "Home"
-                    ? "Welcome to a clearer way out."
+                  : view === "Portfolio"
+                    ? "Your simulated portfolio."
                     : view === "Cash Out"
                       ? "Send it home."
-                      : view === "Positions"
-                        ? "Every trade has a purpose."
                         : view === "Markets"
                           ? "Markets"
-                        : view === "Activity"
-                          ? "Your story, trade by trade."
+                        : view === "History"
+                          ? "Your paper history."
                           : "Keep it simple."}
               </h1>
               <p>{descriptions[view]}</p>
             </div>
             <div className="qw-heading-balance">
               <span>Available cash</span>
-              <strong>{euro(state.cash)}</strong>
+              <strong>{checkingAuth || (account && !ready) ? "Not available" : euro(state.cash)}</strong>
               <button type="button" onClick={() => navigate("Cash Out")}>
                 Send it home <ArrowUpRight size={12} />
               </button>
             </div>
           </div>
-          {view === "Markets" && <Introduction onMarkets={() => navigate("Markets")} />}
           <OfflineNotice />
-          <div className="qw-prototype-notice">
+          {checkingAuth && <p className="qw-market-status" role="status">{workspace.authError || "Restoring your session… Account actions will be available once verification finishes."}</p>}
+          <div className={`qw-prototype-notice${view === "Markets" ? " qx-markets-disclosure" : ""}`}>
             <FlaskConical size={15} />
             <p>
-              You’re in the demo. All trades and transfers are simulated. No
-              real funds are used. New demos start with €10,000 virtual EUR.
+              {checkingAuth ? "Restoring your account session." : account ? "Cloud paper account." : "Device demo."} Real market data. All funds, trades and transfers are simulated. No real money is used.
             </p>
           </div>
-          <p className="qw-market-status" role="status">
+          <p className={view === "Markets" ? "sr-only" : "qw-market-status"} role="status">
             {view === "Markets" ? "Real market prices · your trading balances and executions remain simulated." : <><strong>{marketLabel}</strong> · {marketMessage}</>}
           </p>
-          {(view === "Trade" || view === "Home") && (
+          {(view === "Trade" || view === "Portfolio") && !checkingAuth && (!account || ready) && (
             <section
               className="qw-overview-stats qw-portfolio-stats"
               aria-label="Simulated portfolio"
@@ -367,9 +365,11 @@ export default function Workspace() {
               starts a fresh €10,000 portfolio.
             </p>
           )}
-          {view !== "Settings" && <AccountPanel workspace={workspace} compact />}
-          {view === "Markets" && <Markets activeAsset={state.active?.asset ?? null} disabled={!ready} onSelect={next => { setAsset(next); if (!state.active) { dispatch({ type: "NEW_TRADE" }); setMarketMode("live"); } navigate("Trade"); }} />}
-          {view === "Trade" && (
+          {view !== "Settings" && view !== "Markets" && <AccountPanel workspace={workspace} compact />}
+          {view === "Markets" && <MarketsExperience workspace={workspace} onTrade={() => navigate("Trade")} onResults={() => navigate("Portfolio")}><Markets activeAsset={state.active?.asset ?? null} disabled={!ready} onSelect={next => { setAsset(next); if (!state.active) { dispatch({ type: "NEW_TRADE" }); setMarketMode("live"); } navigate("Trade"); }} /></MarketsExperience>}
+          {(view === "Portfolio" || view === "History") && (checkingAuth || (!!account && !ready)) && <TradeAccountState canChoose={workspace.importAvailable} onPortfolio={() => navigate("Markets")} />}
+          {view === "Trade" && (checkingAuth || (!!account && !ready)) && <TradeAccountState canChoose={workspace.importAvailable} onPortfolio={() => navigate("Markets")} />}
+          {view === "Trade" && !checkingAuth && (!account || ready) && (
             <>
               <div className="qw-paper-controls" inert={!ready}>
                 <div className="qw-trade-layout">
@@ -435,6 +435,7 @@ export default function Workspace() {
                       dispatch={dispatch}
                       playing={state.playing}
                       live={live}
+                      canSell={!live || (usableQuote && (marketStatus === "connected" || marketStatus === "loading"))}
                     />
                   ) : state.lastClosed ? (
                     <ClosedPosition
@@ -451,7 +452,7 @@ export default function Workspace() {
                       notice={state.announcement}
                       asset={asset}
                       dispatch={dispatch}
-                      disabled={live && !usableQuote}
+                      disabled={live && (!usableQuote || (marketStatus !== "connected" && marketStatus !== "loading"))}
                       price={live && quote ? quote.price : ASSETS[asset].price}
                     />
                   )}
@@ -463,7 +464,7 @@ export default function Workspace() {
                   <button
                     type="button"
                     className="qw-text-button"
-                    onClick={() => navigate("Activity")}
+                    onClick={() => navigate("History")}
                   >
                     View all <ArrowUpRight size={13} />
                   </button>
@@ -472,57 +473,12 @@ export default function Workspace() {
               </section>
             </>
           )}
-          {view === "Home" && (
+          {view === "Portfolio" && !checkingAuth && (!account || ready) && (
             <>
-              <Performance state={state} />
-              <p className="qw-market-status">{live ? quote ? `Selected market quote: ${new Date(quote.updatedAt).toLocaleString()} · ${usableQuote && marketStatus === "connected" ? "Fresh" : "Stale or unavailable — last observed valuation"}` : "Waiting for a verified market quote." : "Demo valuation · deterministic simulated prices"}</p>
-              <section className="qw-card qw-home-next">
-                <div>
-                  <span className="qw-overline">YOUR NEXT MOVE</span>
-                  <h2>
-                    {state.active
-                      ? "Your target is doing the work."
-                      : state.lastClosed && state.cash > 0
-                        ? "Your trade is done. Send it home."
-                        : "One trade. One clear exit."}
-                  </h2>
-                  <p>
-                    {state.active
-                      ? `${state.active.asset} position · ${signedEuro(state.active.profit)} profit · ${signedEuro(state.active.target)} target`
-                      : state.lastClosed && state.cash > 0
-                        ? `${euro(state.cash)} of simulated cash is ready to leave the platform.`
-                        : "Explore markets and put your virtual EUR to work. All trades are simulated."}
-                  </p>
-                </div>
-                <ActionButton
-                  onClick={() =>
-                    navigate(
-                      state.active
-                        ? "Trade"
-                        : state.lastClosed && state.cash > 0
-                          ? "Cash Out"
-                          : "Markets",
-                    )
-                  }
-                >
-                  {state.active
-                    ? "Monitor trade"
-                    : state.lastClosed && state.cash > 0
-                      ? "Send to Bank"
-                      : "Plan a trade"}
-                </ActionButton>
-              </section>
-              <div className="qw-card qw-recent">
-                <div className="qw-card-heading">
-                  <h2>Recent activity</h2>
-                  <span className="qw-overline">THIS DEMO</span>
-                </div>
-                <ActivityList events={state.events} compact />
-              </div>
-            </>
-          )}
-          {view === "Positions" && (
-            <Positions
+            <PortfolioAllocation state={state} />
+            <Performance state={state} />
+            <div className="qw-beta-actions"><button type="button" className="qm-trade" onClick={newTrade}>Plan a paper trade</button><button type="button" className="qw-text-button" onClick={() => navigate("History")}>View history →</button><button type="button" className="qw-text-button" onClick={() => navigate("Cash Out")}>Simulated transfers →</button></div>
+            <Positions showCompleted={false}
               active={state.active}
               completed={state.completed}
               journal={state.journal ?? {}}
@@ -530,19 +486,23 @@ export default function Workspace() {
               disabled={!ready}
               onMonitor={() => navigate("Trade")}
             />
+            </>
           )}
-          {view === "Activity" && (
+          {view === "History" && !checkingAuth && (!account || ready) && (
+            <>
+            <Positions showActive={false} active={state.active} completed={state.completed} journal={state.journal ?? {}} onNote={(tradeId, note) => dispatch({type:"JOURNAL",tradeId,note})} disabled={!ready} onMonitor={() => navigate("Trade")} />
             <section className="qw-card qw-full-activity">
               <div className="qw-card-heading">
                 <h2>Your activity</h2>
                 <span className="qw-overline">
-                  {state.events.length} EVENTS · DEMO SESSION
+                  {state.events.length} EVENTS · SIMULATED
                 </span>
               </div>
               <ActivityList events={state.events} />
             </section>
+            </>
           )}
-          {view === "Cash Out" && (
+          {view === "Cash Out" && !checkingAuth && (!account || ready) && (
             <div className="qw-paper-controls" inert={!ready}>
               <CashOut
                 cash={state.cash}
@@ -765,7 +725,7 @@ export default function Workspace() {
       </div>
       <nav className="qw-bottom-nav" aria-label="Mobile workspace navigation">
         {navigation
-          .filter((item) => item.name !== "Activity" && item.name !== "Settings")
+          .filter((item) => item.name !== "Settings")
           .map(({ name, icon: Icon }) => (
             <button
               type="button"
@@ -776,7 +736,7 @@ export default function Workspace() {
             >
               <span className="qw-bottom-icon">
                 <Icon size={21} aria-hidden="true" />
-                {name === "Positions" && state.active && (
+                {name === "Portfolio" && state.active && (
                   <span className="qw-bottom-dot" />
                 )}
                 {name === "Cash Out" && state.cash > 0 && (

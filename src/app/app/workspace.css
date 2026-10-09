@@ -2456,3 +2456,76 @@
  .qm-feature-body { grid-template-columns: 1fr 1fr; align-items: center; }
  .qm-feature { padding: 20px; }
 }
+
+/* v0.11: Markets terminal, observed data and simulated portfolio only. */
+.qx-markets-layout { display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start; }
+.qx-markets-content,.qx-markets-aside { min-width:0; }
+.qx-markets-aside { display:grid;gap:20px; }
+.qx-market-hero { position:relative;isolation:isolate;overflow:hidden;min-height:280px;display:flex;align-items:center;padding:32px;border:1px solid #a9ccb322;border-radius:16px;background:radial-gradient(ellipse at 90% 40%,#153b3633,transparent 65%),#0b1411;margin-bottom:20px; }
+.qx-hero-copy { position:relative;z-index:2;max-width:560px; }
+.qx-market-hero h2 { font-size:clamp(28px,3.2vw,46px);line-height:1.12;letter-spacing:-.045em;margin:16px 0; }
+.qx-market-hero h2 span { color:#9bf3c2; }
+.qx-market-hero p { color:#b8c8c0;font-size:16px;line-height:1.5; }
+.qx-orbit { position:absolute;right:-65px;bottom:-100px;width:360px;height:360px;z-index:0;opacity:.55; }
+.qx-globe { width:100%;height:100%;border-radius:50%;border:1px solid #a1f9d966;box-shadow:inset 15px 10px 40px #a4e6ff38,0 0 40px #68e4c719;background:repeating-radial-gradient(ellipse at center,transparent 0 33px,#80d6d51c 34px 35px),repeating-linear-gradient(85deg,transparent 0 42px,#80d6d512 43px 44px),radial-gradient(circle at 30% 25%,#183a45,#071210 65%);transform:rotate(-20deg); }
+.qx-orbit span { position:absolute;left:55px;top:150px;font-size:13px;color:#b9e3d3; }
+.qx-portfolio,.qx-start { padding:22px;background:linear-gradient(145deg,#111a16,#0b1310);border-color:#a9ccb322; }
+.qx-markets-aside h2 { font-size:16px; }
+.qx-markets-aside .qw-card-heading { flex-wrap:wrap;gap:10px; }
+.qx-markets-aside p { font-size:12px;color:#a7b9ad;line-height:1.6; }
+.qx-value-label { font-size:12px;color:#a7b9ad;display:block;margin-top:22px; }
+.qx-portfolio-value { display:block;font-size:30px;letter-spacing:-.04em;margin:7px 0 22px;font-variant-numeric:tabular-nums; }
+.qx-portfolio-metrics { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+.qx-portfolio-metrics div { padding:12px;border:1px solid #a9ccb322;border-radius:10px;min-width:0; }
+.qx-portfolio-metrics dt { font-size:10px;color:#a7b9ad;margin-bottom:9px; }
+.qx-portfolio-metrics dd { margin:0;font-size:15px;color:#a5f6ce;font-variant-numeric:tabular-nums;overflow-wrap:anywhere; }
+.qx-uninitialized { padding:20px 0; }
+.qx-checklist { list-style:none;padding:0;margin:24px 0;display:grid;gap:20px; }
+.qx-checklist li { display:flex;gap:12px;align-items:flex-start; }
+.qx-checklist li>span { border:1px solid #a9ccb333;border-radius:50%;width:30px;height:30px;display:grid;place-items:center;flex-shrink:0;font-size:12px;color:#a5f6ce; }
+.qx-checklist strong { font-size:13px; }
+.qx-checklist p { margin:5px 0 0; }
+.qx-account-details summary { cursor:pointer;font-size:13px;min-height:44px;padding:12px;background:#a5f6ce;color:#082117;border-radius:10px;font-weight:600; }
+.qx-account-details .qw-account-panel { margin-top:12px;padding:12px; }
+.qx-account-details .qw-account-actions { flex-direction:column;align-items:stretch; }
+.qx-compact-intro { padding:0;margin-top:20px;background:transparent;border:0; }
+.qx-compact-intro .qw-card-heading,.qx-compact-intro ol,.qx-compact-intro .qw-micro { display:none; }
+.qx-compact-intro>p { font-size:11px; }
+.qx-compact-intro .qw-beta-actions { flex-wrap:wrap; }
+.qx-markets-layout .qm-feature { padding:14px; }
+.qx-markets-layout .qm-price { font-size:22px; }
+.qx-markets-layout .qm-feature-body { grid-template-columns:1fr; margin-top:12px; }
+.qx-markets-layout .qm-table th,.qx-markets-layout .qm-table td { padding:14px 10px; }
+.qx-market-sort { border:1px solid #a9ccb333;border-radius:10px;background:#101a15;color:#c7d7cd;padding:10px;min-height:44px;max-width:100%; }
+.qx-account-details summary:focus-visible { outline:2px solid #a5f6ce;outline-offset:3px; }
+@media(max-width:1199px) { .qx-markets-layout { grid-template-columns:1fr; } .qx-markets-aside { grid-template-columns:1fr 1fr; } }
+@media(max-width:600px) { .qx-market-hero { min-height:260px;padding:22px; } .qx-orbit { right:-200px;opacity:.25; } .qx-market-hero p { font-size:14px; } .qx-markets-aside { grid-template-columns:1fr; } .qx-markets-layout { gap:16px; } .qx-portfolio,.qx-start { padding:18px; } .qx-markets-layout .qm-feature-body { grid-template-columns:1fr 1fr; } }
+
+/* v0.11.1: compact hierarchy and discoverable mobile account controls. */
+.qx-markets-heading { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;margin:0; }
+.qx-markets-disclosure { margin:0 0 16px;padding:10px 14px; }
+.qx-markets-layout .qx-market-hero { min-height:225px;padding:26px;margin-bottom:14px; }
+.qx-markets-layout .qx-market-hero h2 { font-size:clamp(28px,3vw,42px);margin:12px 0; }
+.qx-markets-layout .qm-feed { margin:10px 0; }
+.qx-markets-layout .qm-feature-body { grid-template-columns:1fr 76px;gap:8px;margin-top:8px;align-items:center; }
+.qx-markets-layout .qm-price { font-size:19px; }
+.qx-markets-layout .qm-feature .qw-table-asset { gap:9px; }
+.qx-markets-layout .qm-feature .qw-asset-mark { width:32px;height:32px; }
+.qx-markets-layout .qm-feature h2 { font-size:14px; }
+.qx-markets-layout .qm-ranges { margin-top:8px;gap:2px; }
+.qx-markets-layout .qm-ranges button { padding:6px;min-height:36px; }
+.qx-markets-layout .qm-discovery { margin:14px 0;gap:8px;flex-wrap:wrap; }
+.qx-mobile-account { display:none; }
+.qx-empty-trade { max-width:650px; }
+@media(max-width:1199px) { .qx-markets-layout .qm-featured { grid-template-columns:repeat(3,minmax(0,1fr)); } .qx-markets-layout .qm-feature-body { grid-template-columns:1fr; } }
+@media(max-width:600px) {
+ .qx-markets-layout .qx-market-hero { min-height:230px;padding:20px; }
+ .qx-markets-layout .qm-featured { grid-template-columns:1fr; }
+ .qx-markets-layout .qm-feature-body { grid-template-columns:1fr 100px; }
+ .qx-mobile-account { display:grid;gap:10px;padding:14px;border:1px solid #a9ccb322;border-radius:12px;background:#111a16;margin-bottom:14px; }
+ .qx-mobile-account>strong { font-size:16px; }
+ .qx-mobile-account summary { cursor:pointer;padding:12px;background:#a5f6ce;color:#082117;border-radius:8px;font-weight:600;min-height:44px; }
+ .qx-mobile-account .qw-account-panel { margin-top:12px;padding:12px; }
+ .qx-mobile-account .qw-account-actions { flex-wrap:wrap; }
+ .qx-markets-aside .qx-account-details { display:none; }
+}

@@ -6,11 +6,13 @@ import { euro, signedEuro, type Position } from "@/lib/demo-trading";
 import { AssetMark } from "./MarketCard";
 export default function Positions({
   active,
+  showActive = true, showCompleted = true,
   completed,
   onMonitor,
   journal, onNote, disabled,
 }: {
   active: Position | null;
+  showActive?: boolean; showCompleted?: boolean;
   completed: Position[];
   onMonitor: () => void;
   journal: Record<string, string>;
@@ -190,7 +192,7 @@ export default function Positions({
   );
   return (
     <div className="qw-positions-view">
-      <section className="qw-card">
+      {showActive && <section className="qw-card">
         <div className="qw-card-heading">
           <h2>Active positions</h2>
           <span className="qw-count">{active ? 1 : 0}</span>
@@ -213,8 +215,8 @@ export default function Positions({
             </button>
           </div>
         )}
-      </section>
-      <section className="qw-card">
+      </section>}
+      {showCompleted && <section className="qw-card">
         <div className="qw-card-heading">
           <h2>Completed positions</h2>
           <span className="qw-count">{completed.length}</span>
@@ -224,7 +226,7 @@ export default function Positions({
         <p className="qw-micro">
           Example history is illustrative and excluded from your demo balance.
         </p>
-      </section>
+      </section>}
     </div>
   );
 }

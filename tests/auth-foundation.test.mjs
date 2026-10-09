@@ -683,3 +683,27 @@ test("hosted accounts fail closed until explicitly enabled despite valid public 
     });
   }
 });
+
+test('initial null events defer to lookup success, missing session, or failure', async () => {
+ for(const outcome of ['restored','missing','error','throw']){
+  let resolve, reject, event;const identities=[],errors=[],checking=[];
+  const c=client({getSession:()=>new Promise((r,j)=>{resolve=r;reject=j}),onAuthStateChange:cb=>{event=cb;return {data:{subscription:{unsubscribe(){}}}}}});
+  const stop=observeAccountSession(c,{setAccount:async a=>identities.push(a),setAuthChecking:v=>checking.push(v)},m=>errors.push(m));
+  event('INITIAL_SESSION',null);await flush();assert.deepEqual(identities,[]);assert.equal(checking.at(-1),true);
+  if(outcome==='throw')reject(Error('fixture failure'));else resolve({data:{session:outcome==='restored'?session(A):null},error:outcome==='error'?Error('fixture error'):null});
+  await flush();
+  if(['error','throw'].includes(outcome)){assert.deepEqual(identities,[]);assert.equal(checking.at(-1),true);assert.equal(errors.at(-1),'Session restoration unavailable. Your account data has not been changed.');}
+  else assert.deepEqual(identities.map(a=>a?.id??null),[outcome==='restored'?A:null]);
+  stop();
+ }
+});
+test('successful lookup restores an account without requiring an initial event', async()=>{
+ const identities=[];const c=client({getSession:async()=>({data:{session:session(A)},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})});
+ const stop=observeAccountSession(c,{setAccount:async a=>identities.push(a),setAuthChecking(){}},()=>{});await flush();assert.deepEqual(identities.map(a=>a.id),[A]);stop();
+});
+test('latest queued auth transition wins and delayed initial events cannot undo logout',async()=>{
+ let event,resolve;const identities=[];const c=client({getSession:()=>new Promise(r=>resolve=r),onAuthStateChange:cb=>{event=cb;return {data:{subscription:{unsubscribe(){}}}}}});
+ const stop=observeAccountSession(c,{setAccount:async a=>identities.push(a),setAuthChecking(){}},()=>{});
+ event('SIGNED_IN',session(A));event('SIGNED_OUT',null);event('INITIAL_SESSION',session(A));resolve({data:{session:session(A)},error:null});await flush();assert.deepEqual(identities,[null]);
+ event('SIGNED_IN',session(A));event('SIGNED_IN',session(B));await flush();assert.deepEqual(identities.map(a=>a?.id??null),[null,B]);stop();
+});

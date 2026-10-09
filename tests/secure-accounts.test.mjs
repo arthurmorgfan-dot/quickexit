@@ -10,7 +10,7 @@ const {encodePaperTrading}=loadTypeScript('src/lib/paper-trading-storage.ts');
 const {initialDemo,demoReducer}=loadTypeScript('src/lib/demo-trading.ts');
 const sha='6a0a0e9e52517badad15932683c388c2addfe50c';
 test('public build identity is SHA-only, reports dirty checkouts and rejects mismatched CI metadata',()=>{
- assert.deepEqual(publicBuildInfo(resolveBuildIdentifier(undefined,sha,true)),{identifier:`git-${sha}-dirty`,commit:sha,dirty:true,version:'0.9'});
+ assert.deepEqual(publicBuildInfo(resolveBuildIdentifier(undefined,sha,true)),{identifier:`git-${sha}-dirty`,commit:sha,dirty:true,version:'0.11.3'});
  assert.equal(resolveBuildIdentifier(sha.toUpperCase(),sha),`git-${sha}`);
  assert.equal(resolveBuildIdentifier(), 'unidentified');
  for(const value of ['sb_secret_should_not_escape','https://private.invalid','abc','a'.repeat(41)]){

@@ -16,7 +16,7 @@ export const ASSETS = {
 } as const;
 export type Asset = keyof typeof ASSETS;
 export type View =
-  "Markets" | "Home" | "Trade" | "Positions" | "Activity" | "Cash Out" | "Settings";
+  "Markets" | "Portfolio" | "Trade" | "History" | "Cash Out" | "Settings";
 export type ExitReason = "target" | "protection" | "manual";
 export type Position = {
   id: number;
