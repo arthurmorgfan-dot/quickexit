@@ -1,0 +1,74 @@
+[
+  {
+    "width": 390,
+    "fixture": "empty",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": false
+  },
+  {
+    "width": 390,
+    "fixture": "examples",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": true
+  },
+  {
+    "width": 390,
+    "fixture": "populated",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": true
+  },
+  {
+    "width": 768,
+    "fixture": "empty",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": false
+  },
+  {
+    "width": 768,
+    "fixture": "examples",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": true
+  },
+  {
+    "width": 768,
+    "fixture": "populated",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": true
+  },
+  {
+    "width": 1440,
+    "fixture": "empty",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": false
+  },
+  {
+    "width": 1440,
+    "fixture": "examples",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": true
+  },
+  {
+    "width": 1440,
+    "fixture": "populated",
+    "overflow": false,
+    "pageErrors": [],
+    "externalRequests": 0,
+    "receiptFocus": true
+  }
+]

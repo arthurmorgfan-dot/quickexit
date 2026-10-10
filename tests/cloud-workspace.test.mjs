@@ -821,3 +821,27 @@ test('unresolved authentication blocks initialization, retry and cloud modificat
  await s.chooseImport(false);await s.chooseImport(true);await s.retry();await s.resolveConflict(true);s.dispatch(buy);await settle();
  assert.equal(writes,0);assert.equal(loads,baseline);assert.equal(s.getSnapshot().ready,false);assert.equal(s.getSnapshot().importAvailable,true);s.dispose();
 });
+
+
+test('auth observer restoration and remount leave an empty cloud account unwritten', async () => {
+  const { observeAccountSession } = loadTypeScript('src/lib/account/auth-session.ts');
+  const f = setup();
+  for (const outcome of ['restored', 'failure']) {
+    const s = f.fresh(); let event;
+    const c = {auth: {getSession: async () => ({data: {session: outcome === 'restored' ? {user: A} : null}, error: outcome === 'failure' ? Error('fixture failure') : null}), onAuthStateChange: cb => {event = cb; return {data: {subscription: {unsubscribe(){}}}};}}};
+    const stop = observeAccountSession(c, s, () => {});
+    event('INITIAL_SESSION', null); await settle();
+    assert.equal(s.getSnapshot().ready, false);
+    if (outcome === 'restored') {
+      assert.equal(s.getSnapshot().account.id, A.id);
+      assert.equal(s.getSnapshot().importAvailable, true);
+      event('TOKEN_REFRESHED', {user: A}); await settle();
+    } else {
+      assert.equal(s.getSnapshot().checkingAuth, true);
+      await s.chooseImport(false); await s.chooseImport(true);
+    }
+    s.dispatch(buy); await s.retry(); await settle();
+    assert.equal(f.commits(), 0); assert.equal(f.row(A.id).raw, null);
+    stop(); s.dispose();
+  }
+});

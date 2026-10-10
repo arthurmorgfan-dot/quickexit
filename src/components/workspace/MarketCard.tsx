@@ -68,7 +68,7 @@ export default function MarketCard({
     (!!data.history && now - data.history.fetchedAt > historyTtl(timeframe))
   );
   return (
-    <section className="qw-card qw-market" aria-label="Asset market overview">
+    <section className={`qw-card qw-market ${!live || !history?.candles.length ? "qw-market-empty" : ""}`} aria-label="Asset market overview">
       <div className="qw-card-heading">
         <label className="qw-overline" htmlFor="asset-choice">
           YOUR ASSET

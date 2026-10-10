@@ -35,7 +35,7 @@ test('workspace renders Markets landing and consolidated desktop/mobile navigati
  assert.ok(!html.includes('class="qx-portfolio-value"'));
 });
 test('legacy Home URL resolves to Portfolio and preserves only an explicitly selected demo mode',async()=>{
- const {LegacyHomeRedirect:LegacyHome}=loadTypeScript('src/app/app/home/page.tsx');
+ const {LegacyHomeRedirect:LegacyHome}=loadTypeScript('src/app/app/home/redirect.ts');
  for(const [params,target] of [[{},'/app?view=Portfolio'],[{demo:'1'},'/app?view=Portfolio&demo=1'],[{demo:'0'},'/app?view=Portfolio']]){
   await assert.rejects(()=>LegacyHome({searchParams:Promise.resolve(params)}),e=>e.digest?.includes(target));
  }

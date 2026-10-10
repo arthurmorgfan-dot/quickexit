@@ -1,0 +1,63 @@
+{
+  "capturedAt": "2026-10-10T18:02:14.272Z",
+  "origin": "http://127.0.0.1:3000",
+  "version": "0.11.5",
+  "isolatedContext": true,
+  "serviceWorkersBlocked": true,
+  "networkPolicy": "Only loopback static assets, /api/build and /app?demo=1 allowed; all other requests blocked before navigation.",
+  "traffic": {
+    "externalBlocked": 0,
+    "localSensitiveBlocked": 11,
+    "allowed": 16,
+    "unexpectedRequests": 0
+  },
+  "indicators": [
+    "Demo workspace",
+    "DEMO · LOCAL",
+    "Device demo."
+  ],
+  "financialEUR": {
+    "cash": 10000,
+    "invested": 0,
+    "value": 10000,
+    "realized": 0,
+    "unrealized": 0,
+    "netProfit": 0
+  },
+  "transferredEUR": 0,
+  "portfolioCapitalEUR": 10000,
+  "activePosition": null,
+  "completedExamples": [
+    {
+      "asset": "BTC",
+      "status": "closed",
+      "example": true
+    },
+    {
+      "asset": "ETH",
+      "status": "closed",
+      "example": true
+    },
+    {
+      "asset": "SOL",
+      "status": "closed",
+      "example": true
+    }
+  ],
+  "actualCompletedTrades": [],
+  "journalNotes": 0,
+  "storage": {
+    "key": "quickexit.paper-trading",
+    "checksumAlgorithm": "SHA-256",
+    "checksum": "2ebc8fb38dccccff47ecead5bfbc6b79e72834a20915091975f127e0275adcd7",
+    "selectedAsset": "BTC",
+    "marketMode": "demo",
+    "playing": true,
+    "tick": 0,
+    "sequence": 1,
+    "eventCount": 1
+  },
+  "pageErrors": [],
+  "visiblePortfolio": "Skip to workspace\nQuickExit\n.\nYOUR WORKSPACE\nMarkets\nTrade\nPortfolio\nHistory\nCash Out\nSettings\nDemo workspace\nReal clarity. Simulated money.\n\nSaved on this device\nSimulated funds only.\n\nBack to QuickExit\nWorkspace /Portfolio\nPROTOTYPE\nSign in\nD\nQUICKEXIT / PORTFOLIO\nYour simulated portfolio.\n\nYour money, from entry to exit.\n\nDevice demo. Real market data. All funds, trades and transfers are simulated. No real money is used.\n\nDemo prices · Deterministic demo controls enabled.\n\nTotal simulated portfolio value\n€10,000.00\nEstimated after trading costs\nAvailable virtual cash\n€10,000.00\nSimulated EUR\nInvested\n€0.00\nSimulated EUR\nRealized net P&L\n+€0.00\nCompleted paper trades · after costs\nUnrealized net P&L\n+€0.00\nNo active position\nTransferred out\n€0.00\nSimulated transfers · excluded from portfolio value\nCapital allocation\nSIMULATED EUR\nAvailable cash\n100.0%\nInvested capital\n0.0%\n\nAllocation reflects cash and invested principal. Unrealized P&L is shown separately; this is not historical market performance.\n\nYour performance\nSIMULATED · NET OF COSTS\nCompleted trades\n0\nWins / losses / even\n0 / 0 / 0\nWin rate\n—\nAverage realized net P&L\n—\nPaid trading fees\n€0.00\nCumulative realized net P&L\n+€0.00\nRealized performance over time\nAll\n1D\n1W\n1M\nYour history starts with your first completed trade.\n\nRecorded paper exits will appear here. No historical portfolio values are estimated.\n\nThe line changes only at recorded exits. Current unrealized net P&L: +€0.00 — separate from this history. Transfers reduce available portfolio value, not trading performance. Paid fees exclude estimated exit fees on open positions.\n\nView history →\nSimulated transfers →\nActive positions\n0\nNo open positions.\n\nOne purposeful trade starts with an amount and a target.\n\nChoose your trade ↗\nQuickExit · Paper trading beta\nBuild git-5d7491ab153c77cfe7356302af4a76a58804654e-dirty\nSaved on this device\n\nCrypto involves financial risk. Capital is at risk; profits are not guaranteed. No live trading, custody, payments, or licensed partner integrations.",
+  "visibleHistory": "Skip to workspace\nQuickExit\n.\nYOUR WORKSPACE\nMarkets\nTrade\nPortfolio\nHistory\nCash Out\nSettings\nDemo workspace\nReal clarity. Simulated money.\n\nSaved on this device\nSimulated funds only.\n\nBack to QuickExit\nWorkspace /History\nPROTOTYPE\nSign in\nD\nQUICKEXIT / HISTORY\nYour paper history.\n\nEvery move, in plain language.\n\nDevice demo. Real market data. All funds, trades and transfers are simulated. No real money is used.\n\nDemo prices · Deterministic demo controls enabled.\n\nCompleted positions\n3\nCompleted simulated positions\nAsset\tInvested\tNet P&L\tClosed\tStatus\n\n₿\nBTC\nExample history\n\t€100.00\t+€5.00\tExample history\t\nProfit target\nView receipt ↗\n\n\nETH\nExample history\n\t€250.00\t−€2.00\tExample history\t\nProtection\nView receipt ↗\n\n\nSOL\nExample history\n\t€50.00\t+€1.82\tExample history\t\nManual sell\nView receipt ↗\n\nExample history is illustrative and excluded from your demo balance.\n\nYour activity\n1 EVENTS · SIMULATED\n\nYour €10,000 virtual portfolio is ready. No real money is used.\n\nLatest demo event\n01\nQuickExit · Paper trading beta\nBuild git-5d7491ab153c77cfe7356302af4a76a58804654e-dirty\nSaved on this device\n\nCrypto involves financial risk. Capital is at risk; profits are not guaranteed. No live trading, custody, payments, or licensed partner integrations."
+}

@@ -1,4 +1,5 @@
 "use client";
+import TradingHistory from "./TradingHistory";
 import { PAPER_COSTS, basisPercent } from "@/lib/paper-execution";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -311,7 +312,7 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
               </h1>
               <p>{descriptions[view]}</p>
             </div>
-            <div className="qw-heading-balance">
+            <div className="qw-heading-balance" hidden={view === "Trade" || view === "Portfolio" || view === "History"}>
               <span>Available cash</span>
               <strong>{checkingAuth || (account && !ready) ? "Not available" : euro(state.cash)}</strong>
               <button type="button" onClick={() => navigate("Cash Out")}>
@@ -330,15 +331,15 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
           <p className={view === "Markets" ? "sr-only" : "qw-market-status"} role="status">
             {view === "Markets" ? "Real market prices · your trading balances and executions remain simulated." : <><strong>{marketLabel}</strong> · {marketMessage}</>}
           </p>
-          {(view === "Trade" || view === "Portfolio") && !checkingAuth && (!account || ready) && (
+          {view === "Portfolio" && !checkingAuth && (!account || ready) && (
             <section
               className="qw-overview-stats qw-portfolio-stats"
               aria-label="Simulated portfolio"
             >
               {[
+                ["Total simulated portfolio value", euro(portfolio.value)],
                 ["Available virtual cash", euro(portfolio.cash)],
                 ["Invested", euro(portfolio.invested)],
-                ["Portfolio value", euro(portfolio.value)],
                 ["Realized net P&L", signedEuro(portfolio.realized)],
                 ["Unrealized net P&L", signedEuro(portfolio.unrealized)],
                 ["Transferred out", euro(state.sent)],
@@ -351,7 +352,7 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
                       ? !state.active ? "No active position" : live ? usableQuote ? "Fresh market valuation · estimated exit costs" : "Last observed valuation · quote unavailable or stale" : "Demo valuation · estimated exit costs"
                       : label === "Realized net P&L" ? "Completed paper trades · after costs"
                       : label === "Transferred out" ? "Simulated transfers · excluded from portfolio value"
-                      : label === "Portfolio value"
+                      : label === "Total simulated portfolio value"
                         ? "Estimated after trading costs"
                         : "Simulated EUR"}
                   </small>
@@ -372,7 +373,36 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
           {view === "Trade" && !checkingAuth && (!account || ready) && (
             <>
               <div className="qw-paper-controls" inert={!ready}>
+                <dl className="qw-trade-summary" aria-label="Simulated trading funds"><div><dt>Available simulated cash</dt><dd>{euro(portfolio.cash)}</dd></div><div><dt>Paper position</dt><dd>{state.active ? `${state.active.asset} · ${euro(portfolio.invested)} invested` : "No active position"}</dd></div></dl>
                 <div className="qw-trade-layout">
+                  {state.active ? (
+                    <ActivePosition
+                      key={state.active.id}
+                      position={state.active}
+                      dispatch={dispatch}
+                      playing={state.playing}
+                      live={live}
+                      canSell={!live || (usableQuote && (marketStatus === "connected" || marketStatus === "loading"))}
+                    />
+                  ) : state.lastClosed ? (
+                    <ClosedPosition
+                      position={state.lastClosed}
+                      cash={state.cash}
+                      onCashOut={() => navigate("Cash Out")}
+                      onNewTrade={newTrade}
+                    />
+                  ) : (
+                    <TradeForm
+                      key={`${account?.id ?? "guest"}-${asset}-${market.mode}`}
+                      live={live}
+                      availableCash={state.cash}
+                      notice={state.announcement}
+                      asset={asset}
+                      dispatch={dispatch}
+                      disabled={live && (!usableQuote || (marketStatus !== "connected" && marketStatus !== "loading"))}
+                      price={live && quote ? quote.price : ASSETS[asset].price}
+                    />
+                  )}
                   <MobileDisclosure
                     label="Market overview"
                     hint={`${selectedAsset} · ${marketLabel}`}
@@ -428,34 +458,7 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
                       </div>
                     </div>
                   </MobileDisclosure>
-                  {state.active ? (
-                    <ActivePosition
-                      key={state.active.id}
-                      position={state.active}
-                      dispatch={dispatch}
-                      playing={state.playing}
-                      live={live}
-                      canSell={!live || (usableQuote && (marketStatus === "connected" || marketStatus === "loading"))}
-                    />
-                  ) : state.lastClosed ? (
-                    <ClosedPosition
-                      position={state.lastClosed}
-                      cash={state.cash}
-                      onCashOut={() => navigate("Cash Out")}
-                      onNewTrade={newTrade}
-                    />
-                  ) : (
-                    <TradeForm
-                      key={`${account?.id ?? "guest"}-${asset}-${market.mode}`}
-                      live={live}
-                      availableCash={state.cash}
-                      notice={state.announcement}
-                      asset={asset}
-                      dispatch={dispatch}
-                      disabled={live && (!usableQuote || (marketStatus !== "connected" && marketStatus !== "loading"))}
-                      price={live && quote ? quote.price : ASSETS[asset].price}
-                    />
-                  )}
+
                 </div>
               </div>
               <section className="qw-card qw-recent">
@@ -477,7 +480,7 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
             <>
             <PortfolioAllocation state={state} />
             <Performance state={state} />
-            <div className="qw-beta-actions"><button type="button" className="qm-trade" onClick={newTrade}>Plan a paper trade</button><button type="button" className="qw-text-button" onClick={() => navigate("History")}>View history →</button><button type="button" className="qw-text-button" onClick={() => navigate("Cash Out")}>Simulated transfers →</button></div>
+            <div className="qw-beta-actions"><button type="button" className="qw-text-button" onClick={() => navigate("History")}>View history →</button><button type="button" className="qw-text-button" onClick={() => navigate("Cash Out")}>Simulated transfers →</button></div>
             <Positions showCompleted={false}
               active={state.active}
               completed={state.completed}
@@ -490,15 +493,16 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
           )}
           {view === "History" && !checkingAuth && (!account || ready) && (
             <>
-            <Positions showActive={false} active={state.active} completed={state.completed} journal={state.journal ?? {}} onNote={(tradeId, note) => dispatch({type:"JOURNAL",tradeId,note})} disabled={!ready} onMonitor={() => navigate("Trade")} />
-            <section className="qw-card qw-full-activity">
+            <TradingHistory state={state} cloud={!!account} onNote={(tradeId, note) => dispatch({type:"JOURNAL",tradeId,note})} disabled={!ready} />
+            <section className="qw-card qw-full-activity qh-activity">
               <div className="qw-card-heading">
                 <h2>Your activity</h2>
                 <span className="qw-overline">
                   {state.events.length} EVENTS · SIMULATED
                 </span>
               </div>
-              <ActivityList events={state.events} />
+              <ActivityList events={state.events.slice(0, 5)} scope={account ? "Account" : "Demo"} totalCount={state.events.length} />
+              {state.events.length > 5 && <details className="qh-earlier-activity"><summary>View {state.events.length - 5} earlier events</summary><ActivityList events={state.events.slice(5)} scope={account ? "Account" : "Demo"} startIndex={5} totalCount={state.events.length} /></details>}
             </section>
             </>
           )}

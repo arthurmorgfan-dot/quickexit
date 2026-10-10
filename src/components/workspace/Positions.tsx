@@ -1,5 +1,5 @@
 import TradeJournal from "./TradeJournal";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import TradeReceipt, { tradeDate, receiptReason } from "./TradeReceipt";
 import { CircleCheck } from "lucide-react";
 import { euro, signedEuro, type Position } from "@/lib/demo-trading";
@@ -9,7 +9,7 @@ export default function Positions({
   showActive = true, showCompleted = true,
   completed,
   onMonitor,
-  journal, onNote, disabled,
+  journal, onNote, disabled, variant = "standard",
 }: {
   active: Position | null;
   showActive?: boolean; showCompleted?: boolean;
@@ -18,8 +18,17 @@ export default function Positions({
   journal: Record<string, string>;
   onNote: (id: number, note: string) => void;
   disabled: boolean;
+  variant?: "standard" | "history";
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const returnFocus = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (selectedId !== null || returnFocus.current === null) return;
+    const buttons = container.current?.querySelectorAll<HTMLButtonElement>(`[data-receipt-id="${returnFocus.current}"]`);
+    Array.from(buttons ?? []).find(button => button.getClientRects().length > 0)?.focus();
+    returnFocus.current = null;
+  }, [selectedId]);
   const selected = completed.find((p) => p.id === selectedId);
   const history = [...completed].sort((a, b) => {
     if (!!a.example !== !!b.example) return a.example ? 1 : -1;
@@ -41,27 +50,20 @@ export default function Positions({
   );
   if (selected)
     return (
-      <section className="qw-card qw-history-receipt">
+      <div ref={container} className="qw-card qw-history-receipt">
         <button
           type="button"
           className="qw-text-button"
           onClick={() => {
+            returnFocus.current = selected.id;
             setSelectedId(null);
-            requestAnimationFrame(() => {
-              const buttons = document.querySelectorAll<HTMLButtonElement>(
-                `[data-receipt-id="${selected.id}"]`,
-              );
-              Array.from(buttons)
-                .find((b) => b.getClientRects().length)
-                ?.focus();
-            });
           }}
         >
           ← Back to completed trades
         </button>
         <TradeReceipt position={selected} focus />
         {!selected.example && <TradeJournal key={selected.id} note={journal[String(selected.id)] ?? ""} onSave={note => onNote(selected.id, note)} disabled={disabled} />}
-      </section>
+      </div>
     );
   const rows = (positions: Position[]) => (
     <div className="qw-table-scroll qw-desktop-positions">
@@ -154,7 +156,7 @@ export default function Positions({
             >
               {signedEuro(p.profit)}
               <small>
-                {p.status === "closed" ? "Realized net P&L" : "Net P&L"}
+                {p.example ? "Illustrative P&L" : p.status === "closed" ? "Realized net P&L" : "Net P&L"}
               </small>
             </span>
           </div>
@@ -164,8 +166,8 @@ export default function Positions({
               <dd>{euro(p.amount)}</dd>
             </div>
             <div>
-              <dt>Profit target</dt>
-              <dd>{signedEuro(p.target)}</dd>
+              <dt>{p.status === "closed" ? "Exit reason" : "Profit target"}</dt>
+              <dd>{p.status === "closed" ? receiptReason(p) : signedEuro(p.target)}</dd>
             </div>
           </dl>
           {p.status === "active" ? (
@@ -176,12 +178,12 @@ export default function Positions({
             >
               Monitor position ↗
             </button>
-          ) : (
+          ) : variant !== "history" ? (
             <span className="qw-status">
               <CircleCheck size={14} />
               {receiptReason(p)}
             </span>
-          )}
+          ) : null}
           {p.status === "closed" && receiptButton(p)}
           {p.legacy && (
             <p className="qw-micro">Legacy · cost-free accounting</p>
@@ -191,7 +193,7 @@ export default function Positions({
     </ul>
   );
   return (
-    <div className="qw-positions-view">
+    <div ref={container} className={`qw-positions-view ${variant === "history" ? "qh-trades" : ""}`}>
       {showActive && <section className="qw-card">
         <div className="qw-card-heading">
           <h2>Active positions</h2>
@@ -221,11 +223,10 @@ export default function Positions({
           <h2>Completed positions</h2>
           <span className="qw-count">{completed.length}</span>
         </div>
-        {rows(history)}
-        {cards(history)}
-        <p className="qw-micro">
-          Example history is illustrative and excluded from your demo balance.
-        </p>
+        {history.length ? <>{rows(history)}{cards(history)}</> : <div className="qh-empty"><strong>No completed trades to show.</strong><p>Change the filters or explore the labeled examples. Recorded exits will appear here.</p></div>}
+        {history.some(p => p.example) && <p className="qw-micro">
+          Example history is illustrative and excluded from balances and performance.
+        </p>}
       </section>}
     </div>
   );

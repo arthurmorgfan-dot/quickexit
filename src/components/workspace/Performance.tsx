@@ -19,7 +19,7 @@ export default function Performance({ state }: { state: DemoState }) {
   const x = (time: number) => 20 + (last === first ? 0.5 : (time - first) / (last - first)) * 760;
   const y = (value: number) => 170 - (high === low ? 0.5 : (value - low) / (high - low)) * 140;
   const path = points.map((p, i) => `${i ? `H ${x(p.time)} V` : `M ${x(p.time)}`} ${y(p.realized)}`).join(" ");
-  return <section className="qw-card qw-performance">
+  return <section className={`qw-card qw-performance ${history.length ? "" : "qw-performance-empty"}`}>
     <div className="qw-card-heading"><h2>Your performance</h2><span className="qw-badge">SIMULATED · NET OF COSTS</span></div>
     <dl className="qw-performance-metrics">{[
       ["Completed trades", stats.completed], ["Wins / losses / even", `${stats.wins} / ${stats.losses} / ${stats.breakeven}`],

@@ -707,3 +707,38 @@ test('latest queued auth transition wins and delayed initial events cannot undo 
  event('SIGNED_IN',session(A));event('SIGNED_OUT',null);event('INITIAL_SESSION',session(A));resolve({data:{session:session(A)},error:null});await flush();assert.deepEqual(identities,[null]);
  event('SIGNED_IN',session(A));event('SIGNED_IN',session(B));await flush();assert.deepEqual(identities.map(a=>a?.id??null),[null,B]);stop();
 });
+
+
+test('late refresh and user updates cannot replace a newer account or resurrect logout', async () => {
+  let event, resolve;
+  const identities = [];
+  const c = client({getSession: () => new Promise(r => resolve = r), onAuthStateChange: cb => {event = cb; return {data: {subscription: {unsubscribe(){}}}};}});
+  const stop = observeAccountSession(c, {setAccount: async a => identities.push(a?.id ?? null), setAuthChecking(){}}, () => {});
+  event('SIGNED_IN', session(B));
+  event('TOKEN_REFRESHED', session(A));
+  event('USER_UPDATED', session(A));
+  resolve({data: {session: session(A)}, error: null});
+  await flush();
+  assert.deepEqual(identities, [B]);
+  event('TOKEN_REFRESHED', session(B)); await flush();
+  assert.deepEqual(identities, [B, B]);
+  event('SIGNED_OUT', null);
+  event('TOKEN_REFRESHED', session(B));
+  event('USER_UPDATED', session(B)); await flush();
+  assert.deepEqual(identities, [B, B, null]);
+  event('SIGNED_IN', session(A)); await flush();
+  assert.equal(identities.at(-1), A); // A deliberate new sign-in still works.
+  stop();
+});
+
+test('synchronous lookup failure locks restoration and a later real sign-in can recover', async () => {
+  let event; const identities = [], errors = [], checking = [];
+  const c = client({getSession(){throw Error('fixture failure');}, onAuthStateChange: cb => {event = cb; return {data: {subscription: {unsubscribe(){}}}};}});
+  const stop = observeAccountSession(c, {setAccount: async a => identities.push(a?.id ?? null), setAuthChecking: v => checking.push(v)}, m => errors.push(m));
+  event('INITIAL_SESSION', null); await flush();
+  assert.deepEqual(identities, []);
+  assert.equal(checking.at(-1), true);
+  assert.equal(errors.at(-1), 'Session restoration unavailable. Your account data has not been changed.');
+  event('SIGNED_IN', session(A)); await flush();
+  assert.deepEqual(identities, [A]); assert.equal(errors.at(-1), ''); stop();
+});

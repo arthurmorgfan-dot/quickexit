@@ -15,10 +15,11 @@ const icons = {
 };
 export default function ActivityList({
   events,
-  compact = false,
+  compact = false, scope = "Demo", startIndex = 0, totalCount = events.length,
 }: {
   events: ActivityEvent[];
   compact?: boolean;
+  scope?: "Demo" | "Account"; startIndex?: number; totalCount?: number;
 }) {
   return (
     <ol className="qw-activity-list">
@@ -31,10 +32,10 @@ export default function ActivityList({
             </span>
             <div>
               <p>{event.text}</p>
-              <span>{i === 0 ? "Latest demo event" : "This demo session"}</span>
+              <span>{scope === "Demo" ? i + startIndex === 0 ? "Latest demo event" : "This demo session" : i + startIndex === 0 ? "Latest account event" : "Account paper activity"}</span>
             </div>
             <span className="qw-event-order">
-              {String(events.length - i).padStart(2, "0")}
+              {String(totalCount - startIndex - i).padStart(2, "0")}
             </span>
           </li>
         );

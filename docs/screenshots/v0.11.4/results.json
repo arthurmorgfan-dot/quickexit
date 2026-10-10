@@ -1,0 +1,146 @@
+[
+  {
+    "width": 390,
+    "fixture": "empty",
+    "view": "Markets",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "empty",
+    "view": "Trade",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "empty",
+    "view": "Portfolio",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "empty",
+    "view": "History",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "populated",
+    "view": "Markets",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "populated",
+    "view": "Trade",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "populated",
+    "view": "Portfolio",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "fixture": "populated",
+    "view": "History",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "empty",
+    "view": "Markets",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "empty",
+    "view": "Trade",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "empty",
+    "view": "Portfolio",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "empty",
+    "view": "History",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "populated",
+    "view": "Markets",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "populated",
+    "view": "Trade",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "populated",
+    "view": "Portfolio",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "fixture": "populated",
+    "view": "History",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "empty",
+    "view": "Markets",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "empty",
+    "view": "Trade",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "empty",
+    "view": "Portfolio",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "empty",
+    "view": "History",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "populated",
+    "view": "Markets",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "populated",
+    "view": "Trade",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "populated",
+    "view": "Portfolio",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "fixture": "populated",
+    "view": "History",
+    "overflow": false
+  }
+]

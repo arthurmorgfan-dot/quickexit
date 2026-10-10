@@ -12,7 +12,9 @@ export function observeAccountSession(
 ) {
   let alive = true,
     epoch = 0;
+  let resolvedUser: string | null | undefined;
   const apply = (session: { user: { id: string; email?: string } } | null) => {
+    resolvedUser = session?.user.id ?? null;
     onError("");
     void store.setAccount(
       session
@@ -27,7 +29,15 @@ export function observeAccountSession(
     // The explicit lookup owns initialization; later auth transitions supersede it.
     if (_event === "INITIAL_SESSION") return;
     if (!session && _event !== "SIGNED_OUT") return;
+    // Refresh/update events maintain an identity; they must not resurrect a
+    // signed-out session or replace a newer account with an older account.
+    if (
+      (_event === "TOKEN_REFRESHED" || _event === "USER_UPDATED") &&
+      resolvedUser !== undefined && session?.user.id !== resolvedUser
+    ) return;
     const eventEpoch = ++epoch;
+    // Record the newest transition before the deferred store update.
+    resolvedUser = session?.user.id ?? null;
     queueMicrotask(() => {
       if (alive && epoch === eventEpoch) {
         apply(session);
@@ -38,20 +48,20 @@ export function observeAccountSession(
       }
     });
   });
-  void client.auth
-    .getSession()
-    .then(({ data, error }) => {
+  void (async () => {
+    try {
+      const { data, error } = await client.auth.getSession();
       if (!alive || epoch !== initialEpoch) return;
       if (error) {
         onError("Session restoration unavailable. Your account data has not been changed.");
         store.setAuthChecking(true); // Do not unlock an uncertain account or silently switch to Demo.
       } else apply(data.session);
-    })
-    .catch(() => {
+    } catch {
       if (!alive || epoch !== initialEpoch) return;
       onError("Session restoration unavailable. Your account data has not been changed.");
       store.setAuthChecking(true);
-    });
+    }
+  })();
   return () => {
     alive = false;
     epoch++;
