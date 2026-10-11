@@ -2466,6 +2466,7 @@
 .qx-market-hero h2 { font-size:clamp(28px,3.2vw,46px);line-height:1.12;letter-spacing:-.045em;margin:16px 0; }
 .qx-market-hero h2 span { color:#9bf3c2; }
 .qx-market-hero p { color:#b8c8c0;font-size:16px;line-height:1.5; }
+.qx-hero-copy > .qw-beta-actions { padding-top:14px; }
 .qx-orbit { position:absolute;right:-65px;bottom:-100px;width:360px;height:360px;z-index:0;opacity:.55; }
 .qx-globe { width:100%;height:100%;border-radius:50%;border:1px solid #a1f9d966;box-shadow:inset 15px 10px 40px #a4e6ff38,0 0 40px #68e4c719;background:repeating-radial-gradient(ellipse at center,transparent 0 33px,#80d6d51c 34px 35px),repeating-linear-gradient(85deg,transparent 0 42px,#80d6d512 43px 44px),radial-gradient(circle at 30% 25%,#183a45,#071210 65%);transform:rotate(-20deg); }
 .qx-orbit span { position:absolute;left:55px;top:150px;font-size:13px;color:#b9e3d3; }
@@ -2504,7 +2505,7 @@
 /* v0.11.1: compact hierarchy and discoverable mobile account controls. */
 .qx-markets-heading { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;margin:0; }
 .qx-markets-disclosure { margin:0 0 16px;padding:10px 14px; }
-.qx-markets-layout .qx-market-hero { min-height:225px;padding:26px;margin-bottom:14px; }
+.qx-markets-layout .qx-market-hero { min-height:189px;padding:10px 26px;margin-bottom:14px; }
 .qx-markets-layout .qx-market-hero h2 { font-size:clamp(28px,3vw,42px);margin:12px 0; }
 .qx-markets-layout .qm-feed { margin:10px 0; }
 .qx-markets-layout .qm-feature-body { grid-template-columns:1fr 76px;gap:8px;margin-top:8px;align-items:center; }
@@ -2519,7 +2520,9 @@
 .qx-empty-trade { max-width:650px; }
 @media(max-width:1199px) { .qx-markets-layout .qm-featured { grid-template-columns:repeat(3,minmax(0,1fr)); } .qx-markets-layout .qm-feature-body { grid-template-columns:1fr; } }
 @media(max-width:600px) {
- .qx-markets-layout .qx-market-hero { min-height:230px;padding:20px; }
+ .qx-markets-layout .qx-market-hero { min-height:198px;padding:10px 20px; }
+ .qx-markets-layout .qx-market-hero h2 { margin:10px 0; }
+ .qx-hero-copy > .qw-beta-actions { row-gap:4px; }
  .qx-markets-layout .qm-featured { grid-template-columns:1fr; }
  .qx-markets-layout .qm-feature-body { grid-template-columns:1fr 100px; }
  .qx-mobile-account { display:grid;gap:10px;padding:14px;border:1px solid #a9ccb322;border-radius:12px;background:#111a16;margin-bottom:14px; }
@@ -2561,23 +2564,26 @@
 }
 
 /* v0.11.6: compact, factual trading journal. */
-.qh-overview { padding:20px 24px;border:1px solid #a9ccb322;border-radius:16px;background:linear-gradient(145deg,#111a16,#0b1310); }
+.qh-overview { padding:16px 20px;border:1px solid #a9ccb322;border-radius:16px;background:linear-gradient(145deg,#111a16,#0b1310); }
 .qh-overview-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }
 .qh-overview-heading>strong { font-size:18px;letter-spacing:-.02em; }
-.qh-metrics { display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:20px;margin:20px 0 12px; }
+.qh-metrics { display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:20px;margin:14px 0 10px; }
 .qh-metrics div { min-width:0; }
 .qh-metrics dt { color:#a7b9ad;font-size:12px;margin-bottom:8px; }
 .qh-metrics dd { margin:0;font-size:28px;font-variant-numeric:tabular-nums;letter-spacing:-.04em; }
 .qh-metrics div:not(:first-child) dd { font-size:24px; }
+.qh-metrics>div:first-child dd { font-weight:600; }
 .qh-explorer { margin-top:18px; }
+.qh-history .qw-micro { font-size:12px;line-height:1.55;color:#b3c5b9;text-align:left; }
+.qh-history .qh-overview>.qw-micro { margin-bottom:0; }
 .qh-filters { display:flex;flex-wrap:wrap;align-items:end;gap:12px; }
-.qh-filters label { display:grid;gap:7px;font-size:11px;color:#a7b9ad;flex:1;min-width:110px; }
-.qh-filters select,.qh-filters input { width:100%;min-width:0;min-height:42px;border:1px solid #a9ccb333;border-radius:9px;padding:9px 11px;background:#101a15;color:#edf7ef;font:inherit;font-size:13px;color-scheme:dark; }
-.qh-filters button { min-height:42px; }
+.qh-filters label { display:grid;gap:7px;font-size:12px;color:#b3c5b9;flex:1;min-width:110px; }
+.qh-filters select,.qh-filters input { width:100%;min-width:0;min-height:44px;border:1px solid #a9ccb333;border-radius:9px;padding:9px 11px;background:#101a15;color:#edf7ef;font:inherit;font-size:13px;color-scheme:dark; }
+.qh-filters button { min-height:44px; }
 .qh-filters :focus-visible { outline:2px solid #96edb9;outline-offset:3px; }
 .qh-trades>.qw-card { padding:20px;margin-top:14px; }
 .qh-trades .qw-positions-table { margin-top:10px; }
-.qh-trades .qw-positions-table td,.qh-trades .qw-positions-table th { padding-top:17px;padding-bottom:17px; }
+.qh-trades .qw-positions-table td,.qh-trades .qw-positions-table th { padding-top:14px;padding-bottom:14px; }
 .qh-trades .qw-positions-table td:nth-child(3) { font-size:18px;font-weight:600;font-variant-numeric:tabular-nums; }
 .qh-trades .qw-positions-table td:last-child { white-space:normal; }
 .qh-trades .qw-positions-table td:last-child .qw-small-action { margin-top:9px;display:block; }
@@ -2592,16 +2598,20 @@
 .qw-history-receipt .qw-journal { margin-top:24px;padding-top:24px;border-top:1px solid #a9ccb322; }
 .qw-history-receipt>.qw-text-button { margin-bottom:18px;min-height:44px; }
 .qh-activity { margin-top:20px; }
+@media(min-width:701px) and (max-width:1100px) {
+ .qh-filters { display:grid;grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .qh-filters label { min-width:0; }
+}
 @media(max-width:700px) {
- .qh-overview { padding:18px; }
+ .qh-overview { padding:16px; }
  .qh-overview-heading { flex-wrap:wrap; }
- .qh-metrics { grid-template-columns:1fr 1fr;gap:18px;margin-top:18px; }
- .qh-metrics>div:first-child { grid-column:1/-1; }
- .qh-metrics dd { font-size:30px; }
+ .qh-metrics { grid-template-columns:1.3fr 1fr 1fr;gap:10px;margin:14px 0 10px; }
+ .qh-metrics dt { min-height:32px;margin-bottom:5px; }
+ .qh-metrics dd { font-size:26px; }
  .qh-metrics div:not(:first-child) dd { font-size:22px; }
  .qh-filters { gap:10px; }
  .qh-filters label { flex:1 1 calc(50% - 10px);min-width:0; }
- .qh-filters label:first-child { flex-basis:100%; }
+ .qh-explorer { margin-top:12px; }
  .qh-trades>.qw-card { padding:16px; }
  .qh-trades .qw-mobile-positions dl { grid-template-columns:1fr 1fr; }
 }

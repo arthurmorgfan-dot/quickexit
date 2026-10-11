@@ -7,8 +7,8 @@ const {workspaceView}=loadTypeScript('src/lib/workspace-navigation.ts');
 const {initialDemo}=loadTypeScript('src/lib/demo-trading.ts');
 const {default:Positions}=loadTypeScript('src/components/workspace/Positions.tsx');
 const {default:PortfolioAllocation}=loadTypeScript('src/components/workspace/PortfolioAllocation.tsx');
-test('landing defaults to Markets and legacy view names resolve without changing authentication mode',()=>{
- for(const value of [null,'','unknown','demo=1'])assert.equal(workspaceView(value),'Markets');
+test('landing defaults to Portfolio and legacy view names resolve without changing authentication mode',()=>{
+ for(const value of [null,'','unknown','demo=1'])assert.equal(workspaceView(value),'Portfolio');
  for(const value of ['Home','Positions','Portfolio'])assert.equal(workspaceView(value),'Portfolio');
  for(const value of ['Activity','History'])assert.equal(workspaceView(value),'History');
  for(const value of ['Trade','Settings','Cash Out'])assert.equal(workspaceView(value),value);
@@ -29,7 +29,7 @@ test('allocation uses existing capital, distinguishes principal from P&L and han
 test('workspace renders Markets landing and consolidated desktop/mobile navigation while auth is unresolved',()=>{
  const {default:Workspace}=loadTypeScript('src/components/workspace/Workspace.tsx');
  const html=renderToStaticMarkup(React.createElement(Workspace));
- assert.ok(html.includes('Practice real decisions'));assert.ok(html.includes('Checking account'));
+ assert.ok(html.includes('Your simulated portfolio'));assert.ok(html.includes('Checking account'));
  assert.ok(html.includes('Portfolio'));assert.ok(html.includes('History'));
  assert.ok(!html.includes('>Home<'));assert.ok(!html.includes('>Positions<'));assert.ok(!html.includes('>Activity<'));
  assert.ok(!html.includes('class="qx-portfolio-value"'));
@@ -39,4 +39,23 @@ test('legacy Home URL resolves to Portfolio and preserves only an explicitly sel
  for(const [params,target] of [[{},'/app?view=Portfolio'],[{demo:'1'},'/app?view=Portfolio&demo=1'],[{demo:'0'},'/app?view=Portfolio']]){
   await assert.rejects(()=>LegacyHome({searchParams:Promise.resolve(params)}),e=>e.digest?.includes(target));
  }
+});
+test('URL navigation preserves deep-link mode and reconciles history independently of session restoration',async()=>{
+ const {workspaceUrl,currentWorkspaceView,subscribeWorkspaceNavigation}=loadTypeScript('src/lib/workspace-navigation.ts');
+ assert.equal(workspaceUrl('http://127.0.0.1:3001/app?demo=1&keep=yes#details','History'),'/app?demo=1&keep=yes&view=History#details');
+ const previous=globalThis.window;
+ const target=new EventTarget();target.location={href:'http://127.0.0.1:3001/app?demo=1&view=History'};globalThis.window=target;
+ try {
+  let updates=0;const off=subscribeWorkspaceNavigation(()=>updates++);
+  assert.equal(currentWorkspaceView(),'History');
+  target.location.href='http://127.0.0.1:3001/app?view=Trade';target.dispatchEvent(new Event('popstate'));
+  assert.equal(currentWorkspaceView(),'Trade');assert.equal(updates,1);
+  const {observeAccountSession}=loadTypeScript('src/lib/account/auth-session.ts');
+  let resolve;const lookup=new Promise(r=>resolve=r);let restored=false;
+  const stop=observeAccountSession({auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getSession:()=>lookup}}, {setAuthChecking(){},async setAccount(){restored=true;}},()=>{});
+  assert.equal(currentWorkspaceView(),'Trade');
+  resolve({data:{session:{user:{id:'local-fixture'}}},error:null});await lookup;await Promise.resolve();
+  assert.equal(restored,true);assert.equal(currentWorkspaceView(),'Trade');stop();off();
+  target.dispatchEvent(new Event('popstate'));assert.equal(updates,1);
+ } finally {if(previous===undefined)delete globalThis.window;else globalThis.window=previous;}
 });

@@ -1,10 +1,10 @@
-export type BuildInfo = { identifier: string; commit: string | null; dirty: boolean; version: "0.11.6" };
+export type BuildInfo = { identifier: string; commit: string | null; dirty: boolean; version: "0.11.7" };
 /** Only a full Git SHA and a dirty marker may cross the public boundary. */
 export function publicBuildInfo(value: string | undefined): BuildInfo {
   const match = /^git-([a-f0-9]{40})(-dirty)?$/.exec(value ?? "");
   return match
-    ? { identifier: value!, commit: match[1], dirty: !!match[2], version: "0.11.6" }
-    : { identifier: "unidentified", commit: null, dirty: false, version: "0.11.6" };
+    ? { identifier: value!, commit: match[1], dirty: !!match[2], version: "0.11.7" }
+    : { identifier: "unidentified", commit: null, dirty: false, version: "0.11.7" };
 }
 export function resolveBuildIdentifier(commitValue?: string, gitHead?: string, dirty = false): string {
   const commit = commitValue?.trim();

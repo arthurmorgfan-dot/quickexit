@@ -2,7 +2,8 @@
 import TradingHistory from "./TradingHistory";
 import { PAPER_COSTS, basisPercent } from "@/lib/paper-execution";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { currentWorkspaceView, subscribeWorkspaceNavigation, workspaceUrl } from "@/lib/workspace-navigation";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -60,7 +61,7 @@ const descriptions: Record<View, string> = {
   "Cash Out": "Your money’s next destination: home.",
   Settings: "A demo that moves at your pace.",
 };
-export default function Workspace({ initialView = "Markets" }: { initialView?: View }) {
+export default function Workspace({ initialView = "Portfolio" }: { initialView?: View }) {
   const workspace = usePersistentDemo();
   const {
     state,
@@ -87,8 +88,8 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
     const timer = setInterval(update, 5000);
     return () => { clearTimeout(first); clearInterval(timer); };
   }, []);
-  const [view, setView] = useState<View>(initialView),
-    [confirmReset, setConfirmReset] = useState(false);
+  const view = useSyncExternalStore(subscribeWorkspaceNavigation, currentWorkspaceView, () => initialView);
+  const [confirmReset, setConfirmReset] = useState(false);
   const saveLabel = checkingAuth
     ? "Checking account…"
     : account
@@ -114,7 +115,9 @@ export default function Workspace({ initialView = "Markets" }: { initialView?: V
           : "Not saved on this device";
   const titleRef = useRef<HTMLHeadingElement>(null);
   const navigate = (next: View) => {
-    setView(next);
+    const url = workspaceUrl(window.location.href, next);
+    if (currentWorkspaceView() !== next) window.history.pushState(null, "", url);
+    window.dispatchEvent(new Event("quickexit:navigation"));
     setConfirmReset(false);
     window.requestAnimationFrame(() => {
       titleRef.current?.focus({ preventScroll: true });

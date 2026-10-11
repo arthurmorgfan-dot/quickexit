@@ -73,6 +73,22 @@ try{
     await page.getByLabel('To',{exact:true}).fill('2020-01-01');await page.getByText('Choose an end date on or after the start date.').waitFor();
    }
   }
+  for (const section of ['Portfolio','History','Markets','Trade']) {
+   await page.evaluate(()=>document.activeElement?.blur());
+   await page.getByRole('button',{name:section,exact:true}).click();
+   assert.equal(new URL(page.url()).searchParams.get('view'),section);
+   await page.reload();
+   await page.getByRole('button',{name:section,exact:true}).waitFor();
+   assert.equal(await page.getByRole('button',{name:section,exact:true}).getAttribute('aria-current'),'page');
+  }
+  await page.goBack();
+  await page.waitForFunction(()=>new URL(location.href).searchParams.get('view')==='Markets');
+  assert.equal(await page.getByRole('button',{name:'Markets',exact:true}).getAttribute('aria-current'),'page');
+  await page.goForward();
+  await page.waitForFunction(()=>new URL(location.href).searchParams.get('view')==='Trade');
+  await page.goto(base+'/app?demo=1');
+  await page.getByRole('button',{name:'Portfolio',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Portfolio',exact:true}).getAttribute('aria-current'),'page');
   assert.equal(external,0);assert.deepEqual(errors,[]);
   results.push({width,fixture,overflow:false,pageErrors:errors,externalRequests:external,receiptFocus:fixture!=='empty'});
   await context.close();
